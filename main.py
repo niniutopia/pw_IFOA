@@ -1,4 +1,5 @@
 import streamlit as st
+import requests
 
 # Configurazione della pagina
 st.set_page_config(
@@ -28,24 +29,23 @@ st.markdown("""
 col1, col2 = st.columns([0.8, 0.2])
 with col1:
     st.markdown('<div class="main-header">🎮 Steam Buddies</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">Scopri i tuoi gusti di gioco e confrontali con i tuoi amici</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Una panoramica del tuo account di steam, confrontala con quella dei tuoi amici!</div>', unsafe_allow_html=True)
 
-st.divider()
-
-# Sidebar con info
-with st.sidebar:
-    st.title("Steam Buddies")
-    st.markdown("---")
-    st.markdown("""
+st.markdown("""
     **Benvenuto!** 👋
     
     Questa app ti aiuta a:
     - 📊 Analizzare le tue statistiche di gioco
-    - 🎯 Scoprire i giochi che giochi di più
+    - 🎯 Scoprire a cosa giochi di più
     - 👥 Confrontare i tuoi gusti con i tuoi amici
     - 🎁 Trovare giochi che i tuoi amici dovrebbero provare
     
     Naviga usando le pagine nel menu a sinistra.
     """)
+
+
+# Sidebar con info
+with st.sidebar:
+    st.title("Steam Buddies")
     st.markdown("---")
     st.caption("Alimentato da Steam Web API")

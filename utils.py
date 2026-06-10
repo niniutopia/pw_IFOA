@@ -51,7 +51,7 @@ def get_owned_games(api_key, steam_id):
     params = {
         "key": api_key,
         "steamid": steam_id,
-        "include_appid": True,
+        "include_appinfo": True,
         "include_played_free_games": True
     }
     response = requests.get(url, params=params)
@@ -143,3 +143,14 @@ def format_hours(minutes):
 def validate_steam_id(steam_id):
     """Valida il formato dello Steam ID"""
     return steam_id.strip().isdigit() and len(steam_id.strip()) >= 17
+
+
+def get_unplayed_games(games):
+    """
+    Restituisce la lista dei giochi posseduti ma mai avviati
+    (playtime_forever uguale a 0).
+    """
+    # Filtriamo la lista tenendo solo i giochi con 0 minuti registrati
+    unplayed_games = [g for g in games if g.get("playtime_forever", 0) == 0]
+    
+    return unplayed_games

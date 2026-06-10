@@ -9,7 +9,8 @@ from utils import (
     get_owned_vs_played_ratio,
     format_hours,
     validate_steam_id,
-    parse_steam_input
+    parse_steam_input,
+    get_unplayed_games
 )
 
 st.set_page_config(page_title="Dashboard", page_icon="📊")
@@ -18,10 +19,6 @@ st.title("📊 Dashboard Personale")
 st.write("Analizza le tue statistiche di gioco Steam")
 
 # Inizializza la API key
-if "STEAM_API_KEY" not in st.secrets:
-    st.error("⚠️ API Key non configurata. Aggiungi STEAM_API_KEY nel file secrets.toml")
-    st.stop()
-
 API_KEY = st.secrets["STEAM_API_KEY"]
 
 # Input Steam ID
@@ -132,8 +129,23 @@ if search_button or steam_id:
         - 📊 {percentage:.1f}% del tuo catalogo usato
         """)
     
+    with st.expander("📦 Pile of Shame:"):
+        # 2. Richiami la nuova funzione PASSANDO LA LISTA DEI GIOCHI
+        # Assicurati che "games" sia il nome della variabile che contiene la lista dei giochi estratti dall'API
+        giochi_vergini = get_unplayed_games(games) 
+        
+        # 3. Mostri i risultati su Streamlit
+        st.write(f"Hai **{len(giochi_vergini)}** giochi che non hai mai aperto. Ecco quali sono:")
+        
+        for gioco in giochi_vergini:
+            # Nota: ricordati che get_owned_games deve avere "include_appinfo": True
+            # altrimenti Steam non ti restituisce il "name" ma solo l'"appid"
+            nome_gioco = gioco.get("name", f"App ID sconosciuto ({gioco.get('appid')})")
+            st.write(f"- 👻 {nome_gioco}")
+            
+
     st.divider()
-    
+
     # SEZIONE 3: TOP 10 GIOCHI DI SEMPRE
     st.subheader("🏆 Top 10 Giochi di Sempre")
     
