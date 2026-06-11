@@ -79,6 +79,5 @@ st.markdown("""
 # Sidebar con info
 with st.sidebar:
     st.title("Steam Buddy")
-    st.markdown("Analizza le tue statistiche di gioco e confrontati con i tuoi amici!")
     st.markdown("---")
     st.caption("Alimentato da Steam Web API")
