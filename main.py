@@ -14,7 +14,6 @@ st.markdown("""
     <style>
     .main-header {
         font-size: 2.5rem;
-        color: #1b1c1d;
         margin-bottom: 1rem;
     }
     .subtitle {
