@@ -273,8 +273,11 @@ if st.session_state.ricerca_avviata:
     # Ordiniamo i giochi alfabeticamente per nome per rendere la lista ordinata
     sorted_apps = sorted(all_apps_dict.items(), key=lambda x: x[1].lower())
     
-    # Costruiamo le opzioni inserendo l'input manuale come prima scelta
+    # Costruiamo le opzioni 
     selectbox_options = [f"{name} (AppID: {appid})" for appid, name in sorted_apps]
+    
+    # 🔴 FIX: Inseriamo un'opzione di default vuota al primo posto
+    selectbox_options.insert(0, "--- Seleziona un gioco ---")
     
     selected_option = st.selectbox(
         "Scegli un gioco o inizia a scrivere il titolo:",
@@ -286,18 +289,22 @@ if st.session_state.ricerca_avviata:
     app_id = None
     game_name = ""
     
-    # Se l'utente vuole inserire un AppID non presente nelle librerie (es. Family Share di terzi)
-    if selected_option == "🔍 Inserisci un AppID personalizzato...":
+    # 🔴 FIX: Gestiamo l'opzione di default per non far partire l'analisi
+    if selected_option == "--- Seleziona un gioco ---":
+        st.write("👆 *In attesa di selezione...*")
+        
+    elif selected_option == "🔍 Inserisci un AppID personalizzato...":
         custom_appid = st.text_input("Inserisci l'AppID di Steam (es. 105600 per Terraria, 218620 per Payday 2):")
         if custom_appid.isdigit():
             app_id = int(custom_appid)
             game_name = f"Gioco Personalizzato (AppID: {app_id})"
+            
     else:
         # Estrai l'app_id dal testo della selectbox
         app_id = int(selected_option.split("(AppID: ")[1].rstrip(")"))
         game_name = selected_option.split(" (AppID:")[0]
         
-    # Facciamo partire l'analisi solo se abbiamo un AppID valido
+    # Facciamo partire l'analisi SOLO se abbiamo un AppID valido (ovvero l'utente ha scelto qualcosa)
     if app_id:
         with st.spinner("📥 Recupero achievement, testi e rarità..."):
             # Dati sbloccati grezzi
@@ -336,9 +343,9 @@ if st.session_state.ricerca_avviata:
                 total_achievements = len(ach_1.get("achievements", []))
                 common_achievements = achievements_1 & achievements_2
                 
-                st.success(f"✅ Achievements di '{game_name}' recuperati con successo!")
-
-                # --- STATISTICHE BASE ---
+                st.success(f"✅ Achievements di '{game_name}' recuperati con successo!")                           
+     
+     # --- STATISTICHE BASE ---
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
@@ -350,8 +357,7 @@ if st.session_state.ricerca_avviata:
                 with col4:
                     pct_sync = (len(common_achievements) / total_achievements * 100) if total_achievements > 0 else 0
                     st.metric("Sincronismo", f"{pct_sync:.0f}%")
-                
-                               
+     
                 # --- CALCOLO DEI TROFEI PIÙ RARI ---
                                 
                 def find_rarest(unlocked_list, rarity_dict):

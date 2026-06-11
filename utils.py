@@ -227,3 +227,40 @@ def get_achievement_percentages(app_id):
         pass
         
     return {}
+
+@lru_cache(maxsize=1000)
+def get_game_features(app_id):
+    """
+    Usa le API del Negozio di Steam per capire se il gioco supporta 
+    il Multiplayer, la Co-op o il Remote Play Together.
+    """
+    url = f"https://store.steampowered.com/api/appdetails"
+    params = {"appids": app_id}
+    
+    try:
+        response = requests.get(url, params=params, timeout=5)
+        
+        # Se Steam ci sta bloccando per le troppe richieste (Errore 429)
+        if response.status_code == 429:
+            time.sleep(1) # Pausa tattica di 1 secondo
+            response = requests.get(url, params=params, timeout=5)
+            
+        if response.status_code == 200:
+            data = response.json()
+            app_data = data.get(str(app_id), {})
+            
+            if app_data.get("success"):
+                categories = app_data["data"].get("categories", [])
+                
+                # Estraiamo solo gli ID numerici delle categorie
+                cat_ids = [cat["id"] for cat in categories]
+                
+                return {
+                    "is_multiplayer": (1 in cat_ids) or (9 in cat_ids) or (38 in cat_ids),
+                    "has_remote_play": 44 in cat_ids
+                }
+    except Exception:
+        pass
+        
+    # Se il gioco è stato rimosso dallo store o fallisce la chiamata
+    return {"is_multiplayer": False, "has_remote_play": False}
