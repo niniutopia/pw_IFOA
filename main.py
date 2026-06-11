@@ -5,8 +5,6 @@ import requests
 st.set_page_config(
     page_title="Steam Buddy",
     page_icon="🎮",
-    layout="wide",
-    initial_sidebar_state="expanded"
 )
 # Stile CSS personalizzato
 st.markdown("""

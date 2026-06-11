@@ -13,7 +13,7 @@ from utils import (
     get_unplayed_games
 )
 
-st.set_page_config(page_title="Dashboard", page_icon="📊", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Dashboard", page_icon="📊")
 
 # Stile CSS personalizzato
 st.markdown("""

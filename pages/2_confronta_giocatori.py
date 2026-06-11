@@ -9,7 +9,7 @@ from utils import (
     parse_steam_input
 )
 
-st.set_page_config(page_title="Confronta Giocatori", page_icon="👥", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Confronta Giocatori", page_icon="👥")
 
 # Stile CSS personalizzato
 st.markdown("""
