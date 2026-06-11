@@ -21,6 +21,10 @@ if "STEAM_API_KEY" not in st.secrets:
 
 API_KEY = st.secrets["STEAM_API_KEY"]
 
+# INIZIALIZZAZIONE MEMORIA DI STREAMLIT
+if "ricerca_avviata" not in st.session_state:
+    st.session_state.ricerca_avviata = False
+
 # Input Steam IDs
 col1, col2 = st.columns(2)
 
@@ -32,7 +36,13 @@ with col2:
 
 search_button = st.button("Confronta", use_container_width=True)
 
+# SE IL BOTTONE VIENE CLICCATO, SALVIAMO NELLA MEMORIA CHE LA RICERCA È PARTITA
 if search_button:
+    st.session_state.ricerca_avviata = True
+
+# ORA USIAMO LA MEMORIA INVECE DEL BOTTONE PER TENERE APERTA LA PAGINA
+if st.session_state.ricerca_avviata:
+    
     # Validazione
     if not steam_id_1 or not steam_id_2:
         st.warning("Per favore, inserisci entrambi gli Steam ID o Vanity URL")
@@ -206,15 +216,16 @@ if search_button:
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.metric(f"G1: Achievement", len(achievements_1))
+                    st.metric("G1: Sbloccati", len(achievements_1))
                 
                 with col2:
-                    st.metric("🤝 Comuni", len(common_achievements))
+                    st.metric("G2: Sbloccati", len(achievements_2))
                 
                 with col3:
-                    st.metric("Totale", total_achievements)
+                    st.metric("🤝 In Comune", len(common_achievements))
                 
                 with col4:
+                    # Manteniamo il calcolo del totale solo in background per la percentuale
                     pct = (len(common_achievements) / total_achievements * 100) if total_achievements > 0 else 0
                     st.metric("Sincronismo", f"{pct:.0f}%")
                 
@@ -264,7 +275,7 @@ if search_button:
                     y=top_20["nome"],
                     x=top_20["Ore"],
                     orientation='h',
-                    marker=dict(color='#2ca02c'),
+                    marker=dict(color='#2ca02c'), # Verde per il G1
                     text=top_20["Ore"],
                     textposition='auto'
                 )
@@ -290,11 +301,63 @@ if search_button:
     
     st.divider()
     
-    # SEZIONE 5: GIOCHI ESCLUSIVI GIOCATORE 2
+    # SEZIONE 5: GIOCHI ESCLUSIVI GIOCATORE 2 (BUG FIXATO)
     st.subheader("🎮 Giochi Esclusivi del Giocatore 2")
+    st.write("Giochi che ha il Giocatore 2 ma non il Giocatore 1")
     
     if only_player_2:
-        st.write(f"Il Giocatore 2 ha {len(only_player_2)} giochi che il Giocatore 1 non possiede")
-        st.info("Questi sono i giochi che potrebbe giocare il Giocatore 1 se interessato")
+        player_2_only_data = []
+        for app_id in only_player_2:
+            g = games_dict_2[app_id]
+            player_2_only_data.append({
+                "nome": g.get("name", "Sconosciuto"),
+                "Ore": format_hours(g.get("playtime_forever", 0)),
+                "Minuti": g.get("playtime_forever", 0)
+            })
+        
+        # Ordina per ore giocate
+        player_2_only_data.sort(key=lambda x: x["Minuti"], reverse=True)
+        
+        df_player_2_only = pd.DataFrame(player_2_only_data)
+        
+        # Visualizzazione
+        col_tab1, col_tab2 = st.tabs(["📋 Tabella", "📊 Top 20"])
+        
+        with col_tab1:
+            st.dataframe(
+                df_player_2_only[["nome", "Ore"]],
+                use_container_width=True,
+                hide_index=True
+            )
+        
+        with col_tab2:
+            top_20_p2 = df_player_2_only.head(20)
+            
+            fig = go.Figure(data=[
+                go.Bar(
+                    y=top_20_p2["nome"],
+                    x=top_20_p2["Ore"],
+                    orientation='h',
+                    marker=dict(color='#d62728'), # Rosso/Arancio scuro per distinguerlo
+                    text=top_20_p2["Ore"],
+                    textposition='auto'
+                )
+            ])
+            
+            fig.update_layout(
+                height=600,
+                yaxis={'categoryorder': 'total ascending'},
+                xaxis_title="Ore di gioco",
+                showlegend=False
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+        st.info(f"""
+        **💡 Scoperta:**
+        Il Giocatore 2 ha {len(only_player_2)} giochi che potresti scroccare con il Family Sharing!
+        Il suo titolo più giocato che tu non hai è **{df_player_2_only.iloc[0]['nome']}** con **{df_player_2_only.iloc[0]['Ore']} ore**.
+        """)
+        
     else:
         st.success("✅ Il Giocatore 1 ha TUTTI i giochi del Giocatore 2!")
