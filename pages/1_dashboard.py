@@ -39,16 +39,17 @@ st.title("📊 Dashboard Personale")
 st.write("Analizza le tue statistiche di gioco Steam")
 
 
-# Inizializza la API key
+# Richiamo la API key
 API_KEY = st.secrets["STEAM_API_KEY"]
 
-# Input Steam ID
+# INPUT
 col1, col2 = st.columns([3, 1])
 with col1:
     steam_id = st.text_input("🔍 Inserisci Steam ID o Vanity URL:", placeholder="Username oppure 76561198...")
 with col2:
     search_button = st.button("Cerca", use_container_width=True)
 
+# INFO STEAMID
 with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
     st.markdown("""
     L'app accetta due formati:
@@ -57,6 +58,7 @@ with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
     - **Esempio**: `76561197960434622` (17 cifre)
     - Puoi trovarlo sul tuo profilo, sono le cifre alla fine dell'url `https://steamcommunity.com/profiles/76561197960434622`
     - **Più affidabile**, funziona sempre se il profilo è pubblico
+    - **Non funziona se incolli tutto il link per intero**
 
     ### Formato 2: Vanity URL (Custom URL)
     - **Esempio**: `https://steamcommunity.com/id/username` oppure solo `username`
@@ -89,7 +91,7 @@ with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
                             
     """)
 
-
+# bottone
 if search_button or steam_id:
     if not steam_id:
         st.warning("Per favore, inserisci uno Steam ID o un Vanity URL")
@@ -192,11 +194,8 @@ if search_button or steam_id:
         """)
     
     with st.expander("📦 Pile of Shame:"):
-        # 2. Richiami la nuova funzione PASSANDO LA LISTA DEI GIOCHI
-        # Assicurati che "games" sia il nome della variabile che contiene la lista dei giochi estratti dall'API
         giochi_vergini = get_unplayed_games(games) 
-        
-        # 3. Mostri i risultati su Streamlit
+
         st.write(f"Hai **{len(giochi_vergini)}** giochi che non hai mai aperto. Ecco quali sono:")
         
         for gioco in giochi_vergini:
@@ -328,21 +327,17 @@ if search_button or steam_id:
 
 # Sidebar con info
 with st.sidebar:
-    # 1. Il tuo titolo svetta in cima
+    # Titolo
     st.markdown("### 🎮 Steam Buddy")
     st.caption("Alimentato da Steam Web API")
-    st.divider() # Una bella linea di separazione
+
+    st.divider() # separazione
     
-    # 2. I tuoi link di navigazione (nello stesso ordine in cui li vuoi tu)
+    # Menù di navigazione
     st.write("Navigazione:")
     
-    # Sostituisci 'main.py' con il nome reale del tuo file principale se è diverso
     st.page_link("main.py", label="Home", icon="🏠")
-    
-    # Sostituisci il percorso e il nome con quelli reali della tua pagina 2
     st.page_link("pages/1_dashboard.py", label="Dashboard Personale", icon="📊")
-    
-    # Aggiungi qui eventuali altre pagine...
     st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")
 
     

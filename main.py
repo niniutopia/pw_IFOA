@@ -32,6 +32,7 @@ with col1:
     st.markdown('<div class="main-header">🎮 Steam Buddy</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">Una panoramica del tuo account di steam, confrontala con quella dei tuoi amici!</div>', unsafe_allow_html=True)
 
+# Testo/body
 st.markdown("""
     **Benvenuto!** 👋
     
@@ -47,19 +48,15 @@ st.markdown("""
 
 # Sidebar con info
 with st.sidebar:
-    # 1. Il tuo titolo svetta in cima
+    # Titolo
     st.markdown("### 🎮 Steam Buddy")
     st.caption("Alimentato da Steam Web API")
-    st.divider() # Una bella linea di separazione
+
+    st.divider() # separazione
     
-    # 2. I tuoi link di navigazione (nello stesso ordine in cui li vuoi tu)
+    # Menù di navigazione
     st.write("Navigazione:")
     
-    # Sostituisci 'main.py' con il nome reale del tuo file principale se è diverso
     st.page_link("main.py", label="Home", icon="🏠")
-    
-    # Sostituisci il percorso e il nome con quelli reali della tua pagina 2
     st.page_link("pages/1_dashboard.py", label="Dashboard Personale", icon="📊")
-    
-    # Aggiungi qui eventuali altre pagine...
     st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")

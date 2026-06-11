@@ -66,6 +66,7 @@ with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
     - **Esempio**: `76561197960434622` (17 cifre)
     - Puoi trovarlo sul tuo profilo, sono le cifre alla fine dell'url `https://steamcommunity.com/profiles/76561197960434622`
     - **Più affidabile**, funziona sempre se il profilo è pubblico
+    - **Non funziona se incolli tutto il link per intero**
 
     ### Formato 2: Vanity URL (Custom URL)
     - **Esempio**: `https://steamcommunity.com/id/username` oppure solo `username`

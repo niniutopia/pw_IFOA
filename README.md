@@ -25,5 +25,6 @@ Una dashboard Streamlit per analizzare le tue statistiche di gioco Steam  in mod
 
 ## 🎯 Idee per Miglioramenti Futuri
 
-- [ ] Statistiche avanzate di gioco (genere, developer, etc.)
-- [ ] Suggerimenti di giochi basati sui gusti comuni
+- Statistiche avanzate di gioco (genere, developer, etc.)
+- Suggerimenti di giochi basati sui gusti comuni
+- Traduzione in inglese
