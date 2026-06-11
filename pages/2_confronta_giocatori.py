@@ -177,7 +177,9 @@ if st.session_state.ricerca_avviata:
     # SEZIONE 2: GIOCHI IN COMUNE
     if common_apps:
         st.subheader("🤝 Giochi in Comune")
-        
+        st.write("NB: l'app non è in grado di recuperare le ore di gioco in family sharing.")
+
+
         common_games_data = []
         for app_id in common_apps:
             g1 = games_dict_1[app_id]
@@ -253,42 +255,89 @@ if st.session_state.ricerca_avviata:
         
         st.divider()
         
-        # SEZIONE 3: ANALISI ACHIEVEMENTS
-        st.subheader("🏅 Analisi Achievements")
-        
-        st.info("Seleziona un gioco dalla lista dei giochi comuni per confrontare gli achievement")
-        
-        selected_game = st.selectbox(
-            "Scegli un gioco:",
-            options=[f"{row['nome']} (AppID: {row['appid']})" for _, row in df_common.iterrows()],
-            key="game_selector"
-        )
-        
-        if selected_game:
-            # Estrai l'app_id dal testo della selectbox
-            app_id = int(selected_game.split("(AppID: ")[1].rstrip(")"))
-            game_name = selected_game.split(" (AppID:")[0]
+    # =====================================================================
+    # SEZIONE 3: ANALISI ACHIEVEMENTS (VERSIONE CON CRITERI RESTRITTIVI)
+    # =====================================================================
+    st.subheader("🏅 Analisi Achievements")
+    
+    st.info("Scegli un gioco dall'unione delle librerie o inizia a scrivere il titolo. Funziona al 100% anche per i giochi in Family Sharing!")
+    
+    # 1. Creiamo l'elenco di TUTTI i giochi presenti in ALMENO una delle due librerie
+    all_apps_dict = {}
+    for g in games_1:
+        all_apps_dict[g["appid"]] = g.get("name", "Sconosciuto")
+    for g in games_2:
+        if g["appid"] not in all_apps_dict:
+            all_apps_dict[g["appid"]] = g.get("name", "Sconosciuto")
             
-            with st.spinner("📥 Recupero achievement, testi e rarità..."):
-                # Dati sbloccati grezzi
-                ach_1 = get_player_achievements(API_KEY, steam_id_1, app_id)
-                ach_2 = get_player_achievements(API_KEY, steam_id_2, app_id)
-                
-                # I "Dizionari" che ci servono per tradurre i codici
-                schema = get_game_schema(API_KEY, app_id) 
-                rarity = get_achievement_percentages(app_id)
+    # Ordiniamo i giochi alfabeticamente per nome per rendere la lista ordinata
+    sorted_apps = sorted(all_apps_dict.items(), key=lambda x: x[1].lower())
+    
+    # Costruiamo le opzioni inserendo l'input manuale come prima scelta
+    selectbox_options = [f"{name} (AppID: {appid})" for appid, name in sorted_apps]
+    
+    selected_option = st.selectbox(
+        "Scegli un gioco o inizia a scrivere il titolo:",
+        options=selectbox_options,
+        key="game_selector"
+    )
+    
+    # Inizializziamo le variabili di controllo
+    app_id = None
+    game_name = ""
+    
+    # Se l'utente vuole inserire un AppID non presente nelle librerie (es. Family Share di terzi)
+    if selected_option == "🔍 Inserisci un AppID personalizzato...":
+        custom_appid = st.text_input("Inserisci l'AppID di Steam (es. 105600 per Terraria, 218620 per Payday 2):")
+        if custom_appid.isdigit():
+            app_id = int(custom_appid)
+            game_name = f"Gioco Personalizzato (AppID: {app_id})"
+    else:
+        # Estrai l'app_id dal testo della selectbox
+        app_id = int(selected_option.split("(AppID: ")[1].rstrip(")"))
+        game_name = selected_option.split(" (AppID:")[0]
+        
+    # Facciamo partire l'analisi solo se abbiamo un AppID valido
+    if app_id:
+        with st.spinner("📥 Recupero achievement, testi e rarità..."):
+            # Dati sbloccati grezzi
+            ach_1 = get_player_achievements(API_KEY, steam_id_1, app_id)
+            ach_2 = get_player_achievements(API_KEY, steam_id_2, app_id)
             
-            if ach_1 and ach_2:
-                # 1. Estraiamo la lista dei codici effettivamente sbloccati
-                ach_unlocked_1 = [ach["apiname"] for ach in ach_1.get("achievements", []) if ach.get("achieved") == 1]
-                ach_unlocked_2 = [ach["apiname"] for ach in ach_2.get("achievements", []) if ach.get("achieved") == 1]
-                
+            # I "Dizionari" per tradurre codici e trovare le percentuali globali
+            schema = get_game_schema(API_KEY, app_id) 
+            rarity = get_achievement_percentages(app_id)
+        
+        # CRITERIO 1: Verifichiamo che Steam confermi che ENTRAMBI hanno avviato il gioco almeno una volta
+        has_data_1 = isinstance(ach_1, dict) and "achievements" in ach_1
+        has_data_2 = isinstance(ach_2, dict) and "achievements" in ach_2
+        
+        if not (has_data_1 and has_data_2):
+            st.warning(f"❌ **Analisi non disponibile:** Almeno uno dei due giocatori non ha mai avviato '{game_name}' oppure ha le statistiche di gioco private.")
+        else:
+            # Estraiamo i codici sbloccati
+            ach_unlocked_1 = [ach["apiname"] for ach in ach_1.get("achievements", []) if ach.get("achieved") == 1]
+            ach_unlocked_2 = [ach["apiname"] for ach in ach_2.get("achievements", []) if ach.get("achieved") == 1]
+            
+            # CRITERIO 2: Verifichiamo che ENTRAMBI abbiano sbloccato almeno un trofeo
+            if len(ach_unlocked_1) == 0 or len(ach_unlocked_2) == 0:
+                st.warning(
+                    f"⚠️ **Confronto annullato per '{game_name}'**\n\n"
+                    f"Entrambi i giocatori devono aver sbloccato almeno un trofeo per sbloccare il confronto.\n\n"
+                    f"**Stato attuale:**\n"
+                    f"- **{name_1}**: {len(ach_unlocked_1)} trofei sbloccati\n"
+                    f"- **{name_2}**: {len(ach_unlocked_2)} trofei sbloccati"
+                )
+            else:
+                # Se superiamo entrambi i criteri, l'analisi è valida e i dati sono solidi!
                 achievements_1 = set(ach_unlocked_1)
                 achievements_2 = set(ach_unlocked_2)
                 
                 total_achievements = len(ach_1.get("achievements", []))
                 common_achievements = achievements_1 & achievements_2
                 
+                st.success(f"✅ Achievements di '{game_name}' recuperati con successo!")
+
                 # --- STATISTICHE BASE ---
                 col1, col2, col3, col4 = st.columns(4)
                 
@@ -302,16 +351,14 @@ if st.session_state.ricerca_avviata:
                     pct_sync = (len(common_achievements) / total_achievements * 100) if total_achievements > 0 else 0
                     st.metric("Sincronismo", f"{pct_sync:.0f}%")
                 
-            
+                               
                 # --- CALCOLO DEI TROFEI PIÙ RARI ---
-                
-                # Piccola funzione interna per trovare il più raro in una lista
+                                
                 def find_rarest(unlocked_list, rarity_dict):
                     rarest_code = None
-                    rarest_pct = 101.0 # Partiamo oltre il 100%
+                    rarest_pct = 101.0
                     
                     for code in unlocked_list:
-                        # 🔴 FIX: Forziamo la conversione in numero (float)
                         try:
                             pct = float(rarity_dict.get(code, 100.0))
                         except (ValueError, TypeError):
@@ -322,7 +369,6 @@ if st.session_state.ricerca_avviata:
                             rarest_code = code
                     return rarest_code, rarest_pct
 
-                # Troviamo il vanto di ciascun giocatore
                 rarest_1, pct_1 = find_rarest(ach_unlocked_1, rarity)
                 rarest_2, pct_2 = find_rarest(ach_unlocked_2, rarity)
                 
@@ -334,8 +380,6 @@ if st.session_state.ricerca_avviata:
                         titolo = schema.get(rarest_1, {}).get("titolo", rarest_1)
                         descrizione = schema.get(rarest_1, {}).get("descrizione", "")
                         st.info(f"**{titolo}**\n\n*{descrizione}*\n\n📈 Sbloccato dal **{pct_1:.1f}%** dei giocatori")
-                    else:
-                        st.info("Nessun achievement sbloccato.")
                         
                 with col_r2:
                     st.write(f"**🏆 Il vanto di {name_2}:**")
@@ -343,16 +387,12 @@ if st.session_state.ricerca_avviata:
                         titolo = schema.get(rarest_2, {}).get("titolo", rarest_2)
                         descrizione = schema.get(rarest_2, {}).get("descrizione", "")
                         st.info(f"**{titolo}**\n\n*{descrizione}*\n\n📈 Sbloccato dal **{pct_2:.1f}%** dei giocatori")
-                    else:
-                        st.info("Nessun achievement sbloccato.")
                         
-                # --- LISTA ACHIEVEMENT IN COMUNE ---
+                
+                # 1. TROFEI IN COMUNE
                 if common_achievements:
-                                        
-                    # Creiamo una lista arricchita per poterli mettere in ordine di rarità
                     common_list = []
                     for ach in common_achievements:
-                        # 🔴 FIX: Anche qui forziamo il numero per permettere un ordinamento corretto
                         try:
                             rarity_val = float(rarity.get(ach, 100.0))
                         except (ValueError, TypeError):
@@ -364,18 +404,59 @@ if st.session_state.ricerca_avviata:
                             "rarita": rarity_val
                         })
                     
-                    # Ordiniamo la lista dal più difficile (percentuale più bassa) al più facile
                     common_list.sort(key=lambda x: x["rarita"])
                     
-                    with st.expander(f"Visualizza i {len(common_achievements)} trofei che avete sbloccato entrambi"):
+                    with st.expander(f"🤝 Visualizza i {len(common_achievements)} trofei che avete sbloccato entrambi"):
                         for ach_data in common_list:
-                            st.write(f"- **{ach_data['titolo']}** (Sbloccato dal {ach_data['rarita']:.1f}%): *{ach_data['descrizione']}*")          
-                st.success(f"✅ Achievement di {game_name} analizzati con successo!")
-            else:
-                st.warning(f"❌ Impossibile recuperare gli achievement per {game_name}. I profili potrebbero non essere pubblici o il gioco non ha trofei.")
-    
+                            st.write(f"- **{ach_data['titolo']}** (Sbloccato dal {ach_data['rarita']:.1f}%): *{ach_data['descrizione']}*")
+                
+                # 2. TROFEI ESCLUSIVI GIOCATORE 1
+                only_ach_1 = achievements_1 - achievements_2
+                if only_ach_1:
+                    p1_list = []
+                    for ach in only_ach_1:
+                        try:
+                            rarity_val = float(rarity.get(ach, 100.0))
+                        except (ValueError, TypeError):
+                            rarity_val = 100.0
+                            
+                        p1_list.append({
+                            "titolo": schema.get(ach, {}).get("titolo", ach),
+                            "descrizione": schema.get(ach, {}).get("descrizione", ""),
+                            "rarita": rarity_val
+                        })
+                    
+                    p1_list.sort(key=lambda x: x["rarita"])
+                    
+                    with st.expander(f"🥇 Visualizza i {len(only_ach_1)} trofei sbloccati SOLO da {name_1}"):
+                        for ach_data in p1_list:
+                            st.write(f"- **{ach_data['titolo']}** (Sbloccato dal {ach_data['rarita']:.1f}%): *{ach_data['descrizione']}*")
+                            
+                # 3. TROFEI ESCLUSIVI GIOCATORE 2
+                only_ach_2 = achievements_2 - achievements_1
+                if only_ach_2:
+                    p2_list = []
+                    for ach in only_ach_2:
+                        try:
+                            rarity_val = float(rarity.get(ach, 100.0))
+                        except (ValueError, TypeError):
+                            rarity_val = 100.0
+                            
+                        p2_list.append({
+                            "titolo": schema.get(ach, {}).get("titolo", ach),
+                            "descrizione": schema.get(ach, {}).get("descrizione", ""),
+                            "rarita": rarity_val
+                        })
+                    
+                    p2_list.sort(key=lambda x: x["rarita"])
+                    
+                    with st.expander(f"🥈 Visualizza i {len(only_ach_2)} trofei sbloccati SOLO da {name_2}"):
+                        for ach_data in p2_list:
+                            st.write(f"- **{ach_data['titolo']}** (Sbloccato dal {ach_data['rarita']:.1f}%): *{ach_data['descrizione']}*")
+                
+
     # SEZIONE 4: CONVINCILO A COMPRARLO
-    st.subheader(f"🎁 Convincilo a Comprarlo!")
+    st.subheader(f"🎁 Convincilə a Comprarlo!")
     st.write(f"Giochi che ha **{name_1}** ma non **{name_2}**")
     
     if only_player_1:
@@ -429,7 +510,7 @@ if st.session_state.ricerca_avviata:
         st.info(f"""
         **💡 Consiglio:**
         {name_1} ha {len(only_player_1)} giochi che {name_2} non possiede.
-        Il suo preferito è **{df_player_1_only.iloc[0]['nome']}** con ben **{df_player_1_only.iloc[0]['Ore']} ore** di gioco!
+        Tra questi, il suo preferito è **{df_player_1_only.iloc[0]['nome']}** con ben **{df_player_1_only.iloc[0]['Ore']} ore** di gioco!
         """)
     
     else:
