@@ -1,0 +1,15 @@
+[theme]
+# Il colore primario (pulsanti, barra di caricamento) - Azzurro Steam
+primaryColor = "#66c0f4"
+
+# Lo sfondo principale della pagina - Grigio scurissimo
+backgroundColor = "#171a21"
+
+# Lo sfondo dei widget (sidebar, input di testo, tabelle) - Grigio bluastro
+secondaryBackgroundColor = "#1b2838"
+
+# Il colore del testo
+textColor = "#c7d5e0"
+
+# Il font (sans serif è il più moderno e leggibile)
+font = "sans serif"
