@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import re
 from utils import (
     get_owned_games, 
     get_top_games_by_playtime,
@@ -10,7 +11,7 @@ from utils import (
     format_hours,
     validate_steam_id,
     parse_steam_input,
-    get_unplayed_games
+    get_unplayed_games,
 )
 
 st.set_page_config(page_title="Dashboard", page_icon="📊")
@@ -42,25 +43,58 @@ st.write("Analizza le tue statistiche di gioco Steam")
 # Richiamo la API key
 API_KEY = st.secrets["STEAM_API_KEY"]
 
-# INPUT
-col1, col2 = st.columns([3, 1])
-with col1:
-    steam_id = st.text_input("🔍 Inserisci Steam ID o Vanity URL:", placeholder="Username oppure 76561198...")
-with col2:
-    search_button = st.button("Cerca", use_container_width=True)
+
+# --- 1. CARICAMENTO PROFILO ---
+with st.form("form_profilo"):
+    steam_id = st.text_input(
+        "🔍 Inserisci Steam ID, Vanity URL o Link del profilo:", 
+        placeholder="Es. 76561198... oppure https://steamcommunity.com/id/tuonome"
+    )
+    
+    # Il bottone ora si trova sotto l'input
+    submit_profilo = st.form_submit_button("Cerca", use_container_width=True)
+    
+    if submit_profilo:
+        if steam_id:
+            # --- 1. PULIZIA E REGEX (Tutto dentro il form!) ---
+            clean_input = steam_id.strip().strip("/")
+            
+            match_profiles = re.search(r'steamcommunity\.com/profiles/(\d+)', clean_input)
+            if match_profiles:
+                clean_input = match_profiles.group(1)
+            else:
+                match_id = re.search(r'steamcommunity\.com/id/([^/]+)', clean_input)
+                if match_id:
+                    clean_input = match_id.group(1)
+            
+            # --- 2. CHIAMATA API ---
+            with st.spinner("🔄 Risoluzione profilo e recupero dati..."):
+                sid = parse_steam_input(API_KEY, clean_input)
+                
+                if sid:
+                    st.session_state.active_sid = sid
+                    data = get_owned_games(API_KEY, sid)
+                    st.session_state.my_games = data.get("games", [])
+                    # Ricarica la pagina per mostrare i dati nella dashboard sottostante
+                    st.rerun() 
+                else:
+                    st.error("❌ ID o Link non valido. Controlla e riprova.")
+        else:
+            st.warning("⚠️ Per favore, inserisci un ID o un link.")
 
 # INFO STEAMID
-with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
+with st.expander("📍 Cosa sono lo Steam ID o Vanity URL"):
     st.markdown("""
-    L'app accetta due formati:
+    L'app accetta i sequenti formati:
 
-    ### Formato 1: Steam ID Numerico (32-bit)
+    ### L'url del tuo profilo
+    - **Esempio**: `https://steamcommunity.com/profiles/76561197960434622`
+                
+    ### Steam ID Numerico (32-bit)
     - **Esempio**: `76561197960434622` (17 cifre)
-    - Puoi trovarlo sul tuo profilo, sono le cifre alla fine dell'url `https://steamcommunity.com/profiles/76561197960434622`
     - **Più affidabile**, funziona sempre se il profilo è pubblico
-    - **Non funziona se incolli tutto il link per intero**
 
-    ### Formato 2: Vanity URL (Custom URL)
+    ### Vanity URL (Custom URL)
     - **Esempio**: `https://steamcommunity.com/id/username` oppure solo `username`
     - Se hai impostato un custom URL su Steam, puoi usarlo direttamente
     - **Più comodo**, basta inserire il tuo nome utente Steam
@@ -92,21 +126,37 @@ with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
     """)
 
 # bottone
-if search_button or steam_id:
+if submit_profilo or steam_id:
     if not steam_id:
-        st.warning("Per favore, inserisci uno Steam ID o un Vanity URL")
+        st.warning("Per favore, inserisci uno Steam ID, un Vanity URL o il link del profilo")
         st.stop()
     
-    # Prova a risolvere l'input (sia Steam ID che Vanity URL)
+    # --- ESTRAZIONE DA URL ---
+    # Puliamo l'input da spazi e slash finali accidentali
+    clean_input = steam_id.strip().strip("/")
+    
+    # 1. Controlla se è un URL /profiles/ (ID Numerico)
+    match_profiles = re.search(r'steamcommunity\.com/profiles/(\d+)', clean_input)
+    if match_profiles:
+        clean_input = match_profiles.group(1)
+    else:
+        # 2. Controlla se è un URL /id/ (Vanity Name)
+        match_id = re.search(r'steamcommunity\.com/id/([^/]+)', clean_input)
+        if match_id:
+            clean_input = match_id.group(1)
+    # -------------------------
+
+    # Prova a risolvere l'input pulito (ora supporta ID, Vanity e URL completi)
     with st.spinner("🔄 Sto risolvendo il tuo profilo..."):
-        resolved_steam_id = parse_steam_input(API_KEY, steam_id)
+        resolved_steam_id = parse_steam_input(API_KEY, clean_input)
     
     if not resolved_steam_id:
-        st.error("❌ Steam ID / Vanity URL non valido. Assicurati che:\n- Lo Steam ID sia valido\n- Il Vanity URL esista\n- Il profilo sia pubblico")
+        st.error("❌ Steam ID, Vanity URL o Link non valido. Assicurati che:\n- L'ID o il link sia corretto\n- Il profilo sia pubblico")
         st.stop()
     
     steam_id = resolved_steam_id
-    
+
+
     # Recupera i dati
     with st.spinner("📥 Sto recuperando i tuoi dati da Steam..."):
         games_data = get_owned_games(API_KEY, steam_id)
@@ -335,9 +385,11 @@ with st.sidebar:
     
     # Menù di navigazione
     st.write("Navigazione:")
-    
+
     st.page_link("main.py", label="Home", icon="🏠")
     st.page_link("pages/1_dashboard.py", label="Dashboard Personale", icon="📊")
     st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")
+    st.page_link("pages/3_platinum_hunter.py", label="Platinum Hunter", icon="🏆")
+    
 
     

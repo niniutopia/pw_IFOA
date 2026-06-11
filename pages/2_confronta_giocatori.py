@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import requests
+import re
 from utils import (
     get_owned_games,
     get_player_achievements,
@@ -49,75 +50,65 @@ API_KEY = st.secrets["STEAM_API_KEY"]
 if "ricerca_avviata" not in st.session_state:
     st.session_state.ricerca_avviata = False
 
-# Input Steam IDs
-col1, col2 = st.columns(2)
-
-with col1:
-    steam_id_1 = st.text_input("🎮 Steam ID/Vanity URL Giocatore 1:", placeholder="Username oppure 76561198...")
-
-with col2:
-    steam_id_2 = st.text_input("🎮 Steam ID/Vanity URL Giocatore 2:", placeholder="Username oppure 76561198...")
-
-search_button = st.button("Confronta", use_container_width=True)
-
-with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
-    st.markdown("""
-    L'app accetta due formati:
-
-    ### Formato 1: Steam ID Numerico (32-bit)
-    - **Esempio**: `76561197960434622` (17 cifre)
-    - Puoi trovarlo sul tuo profilo, sono le cifre alla fine dell'url `https://steamcommunity.com/profiles/76561197960434622`
-    - **Più affidabile**, funziona sempre se il profilo è pubblico
-    - **Non funziona se incolli tutto il link per intero**
-
-    ### Formato 2: Vanity URL (Custom URL)
-    - **Esempio**: `https://steamcommunity.com/id/username` oppure solo `username`
-    - Se hai impostato un custom URL su Steam, puoi usarlo direttamente
-    - **Più comodo**, basta inserire il tuo nome utente Steam
-    - Se non hai un Vanity URL personalizzato, usa lo Steam ID numerico
-
-    #### Come impostare un Vanity URL:
-    1. Vai a https://steamcommunity.com/my/edit/settings
-    2. Clicca su "Custom URL"
-    3. Scegli un nome univoco
-    4. Ora puoi usare `https://steamcommunity.com/id/tuonome`
-
-    ## 🔐 Privacy & Profili Pubblici
-
-    **⚠️ Importante:** Affinché l'app funzioni correttamente, il tuo profilo Steam deve essere **pubblico**.
-
-    Per rendere il profilo pubblico:
-    1. Vai a https://steamcommunity.com/my/edit/settings
-    2. Vai a "Privacy settings"
-    3. Assicurati che "Game details", "Playtime statistics" e "Library visibility" siano impostati su **Public**
+# --- INPUT E FORM ---
+with st.form("form_confronto"):
+    col1, col2 = st.columns(2)
     
-    ## 🐛 Troubleshooting
+    with col1:
+        steam_input_1 = st.text_input(
+            "🎮 Giocatore 1 (ID/Vanity/URL):", 
+            placeholder="Es. 76561198... o Link profilo"
+        )
+        
+    with col2:
+        steam_input_2 = st.text_input(
+            "🎮 Giocatore 2 (ID/Vanity/URL):", 
+            placeholder="Es. 76561198... o Link profilo"
+        )
+        
+    # Il bottone posizionato sotto le due colonne
+    search_button = st.form_submit_button("Confronta", use_container_width=True)
+    
+    if search_button:
+        if steam_input_1 and steam_input_2:
+            # --- PULIZIA E REGEX GIOCATORE 1 ---
+            clean_1 = steam_input_1.strip().strip("/")
+            match_prof_1 = re.search(r'steamcommunity\.com/profiles/(\d+)', clean_1)
+            if match_prof_1:
+                clean_1 = match_prof_1.group(1)
+            else:
+                match_id_1 = re.search(r'steamcommunity\.com/id/([^/]+)', clean_1)
+                if match_id_1:
+                    clean_1 = match_id_1.group(1)
+                    
+            # --- PULIZIA E REGEX GIOCATORE 2 ---
+            clean_2 = steam_input_2.strip().strip("/")
+            match_prof_2 = re.search(r'steamcommunity\.com/profiles/(\d+)', clean_2)
+            if match_prof_2:
+                clean_2 = match_prof_2.group(1)
+            else:
+                match_id_2 = re.search(r'steamcommunity\.com/id/([^/]+)', clean_2)
+                if match_id_2:
+                    clean_2 = match_id_2.group(1)
+            
+            # Salviamo nella memoria i link estratti e attiviamo la pagina
+            st.session_state.clean_id_1 = clean_1
+            st.session_state.clean_id_2 = clean_2
+            st.session_state.ricerca_avviata = True
+        else:
+            st.warning("⚠️ Per favore, inserisci gli ID o i link per entrambi i giocatori.")
+            st.session_state.ricerca_avviata = False
 
-    ##### "Profilo privato o Steam ID non valido"
-    - Verifica che il tuo Steam ID sia corretto
-    - Assicurati che il tuo profilo sia impostato su **Public**
-    - Attendi qualche minuto se hai appena reso pubblico il profilo
-                """)
-
-# SE IL BOTTONE VIENE CLICCATO, SALVIAMO NELLA MEMORIA CHE LA RICERCA È PARTITA
-if search_button:
-    st.session_state.ricerca_avviata = True
-
-# ORA USIAMO LA MEMORIA INVECE DEL BOTTONE PER TENERE APERTA LA PAGINA
+# --- ELABORAZIONE DATI (Si attiva quando la ricerca è in memoria) ---
 if st.session_state.ricerca_avviata:
     
-    # Validazione
-    if not steam_id_1 or not steam_id_2:
-        st.warning("Per favore, inserisci entrambi gli Steam ID o Vanity URL")
-        st.stop()
-    
-    # Risolvi gli input
+    # Risolvi gli input passando i dati puliti dalla regex
     with st.spinner("🔄 Sto risolvendo i profili..."):
-        resolved_steam_id_1 = parse_steam_input(API_KEY, steam_id_1)
-        resolved_steam_id_2 = parse_steam_input(API_KEY, steam_id_2)
+        resolved_steam_id_1 = parse_steam_input(API_KEY, st.session_state.clean_id_1)
+        resolved_steam_id_2 = parse_steam_input(API_KEY, st.session_state.clean_id_2)
     
     if not resolved_steam_id_1 or not resolved_steam_id_2:
-        st.error("❌ Uno o entrambi gli Steam ID/Vanity URL non sono validi. Assicurati che i profili siano pubblici.")
+        st.error("❌ Uno o entrambi gli Steam ID o Link non sono validi. Assicurati che i profili siano pubblici.")
         st.stop()
     
     steam_id_1 = resolved_steam_id_1
@@ -125,7 +116,6 @@ if st.session_state.ricerca_avviata:
     
     # Recupera i dati (e i veri nomi)
     with st.spinner("📥 Sto recuperando i dati e i nomi utente..."):
-        # Prende i veri nickname da usare in tutta la UI
         name_1 = get_player_name(API_KEY, steam_id_1)
         name_2 = get_player_name(API_KEY, steam_id_2)
         
@@ -156,8 +146,7 @@ if st.session_state.ricerca_avviata:
     only_player_2 = apps_2 - apps_1
     
     st.success(f"✅ Dati caricati per **{name_1}** e **{name_2}**!")
-    st.divider()
-    
+    st.divider()    
     # SEZIONE 1: STATISTICHE GENERALI
     st.subheader("📊 Statistiche Generali")
     
@@ -200,14 +189,35 @@ if st.session_state.ricerca_avviata:
         df_common = pd.DataFrame(common_games_data)
         
         # Visualizzazione
-        col_tab1, col_tab2, col_tab3 = st.tabs(["📋 Tabella", "📊 Grafico Confronto", "🔥 Top 10"])
+# --- CREAZIONE COLONNA IMMAGINI ---
+        # Sfruttiamo l'AppID per generare il link alla capsula ufficiale di Steam
+        if "appid" in df_common.columns:
+            df_common["Icona"] = df_common["appid"].apply(
+                lambda x: f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{x}/capsule_231x87.jpg"
+            )
+        else:
+            # Se per qualche motivo manca l'appid, creiamo una colonna vuota per evitare crash
+            df_common["Icona"] = ""
+
+        col_tab1, col_tab2 = st.tabs(["🔥 Top 10", "📊 Grafico Confronto"])
         
         with col_tab1:
-            st.dataframe(
-                df_common[["nome", f"Ore {name_1}", f"Ore {name_2}"]],
-                use_container_width=True,
-                hide_index=True
-            )
+            top_10_common = df_common.head(10)
+            st.write("**Top 10 Giochi Comuni (per ore combinate):**")
+            
+            for idx, row in top_10_common.iterrows():
+                # Abbiamo aggiunto una colonna in più all'inizio per l'immagine
+                col_img, col1, col2, col3 = st.columns([1.5, 2, 1, 1]) 
+                
+                with col_img:
+                    if row["Icona"]:
+                        st.image(row["Icona"], use_container_width=True)
+                with col1:
+                    st.write(f"**{idx+1}. {row['nome']}**")
+                with col2:
+                    st.metric(name_1, row[f"Ore {name_1}"])
+                with col3:
+                    st.metric(name_2, row[f"Ore {name_2}"])
         
         with col_tab2:
             # Grafico a barre affiancate
@@ -239,19 +249,6 @@ if st.session_state.ricerca_avviata:
             )
             
             st.plotly_chart(fig, use_container_width=True)
-        
-        with col_tab3:
-            top_10_common = df_common.head(10)
-            st.write("**Top 10 Giochi Comuni (per ore combinate):**")
-            
-            for idx, row in top_10_common.iterrows():
-                col1, col2, col3 = st.columns([2, 1, 1])
-                with col1:
-                    st.write(f"**{idx+1}. {row['nome']}**")
-                with col2:
-                    st.metric(name_1, row[f"Ore {name_1}"])
-                with col3:
-                    st.metric(name_2, row[f"Ore {name_2}"])
         
         st.divider()
         
@@ -343,9 +340,22 @@ if st.session_state.ricerca_avviata:
                 total_achievements = len(ach_1.get("achievements", []))
                 common_achievements = achievements_1 & achievements_2
                 
-                st.success(f"✅ Achievements di '{game_name}' recuperati con successo!")                           
-     
-     # --- STATISTICHE BASE ---
+                st.success(f"✅ Achievements di '{game_name}' recuperati con successo!")                          
+                st.divider()
+                
+                # --- INTESTAZIONE GIOCO (Immagine e Titolo) ---
+                col_img, col_text = st.columns([1, 2])
+                with col_img:
+                    # Carica la copertina ufficiale di Steam usando l'AppID
+                    img_url = f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{app_id}/header.jpg"
+                    st.image(img_url, use_container_width=True)
+                with col_text:
+                    st.title(game_name)
+                    st.caption(f"AppID: {app_id} | Trofei Totali Esistenti: {total_achievements}")
+                
+                st.divider()
+                
+                # --- STATISTICHE BASE ---
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
@@ -460,6 +470,8 @@ if st.session_state.ricerca_avviata:
                         for ach_data in p2_list:
                             st.write(f"- **{ach_data['titolo']}** (Sbloccato dal {ach_data['rarita']:.1f}%): *{ach_data['descrizione']}*")
                 
+
+    st.divider()    
 
     # SEZIONE 4: CONVINCILO A COMPRARLO
     st.subheader(f"🎁 Convincilə a Comprarlo!")
@@ -596,3 +608,4 @@ with st.sidebar:
     st.page_link("main.py", label="Home", icon="🏠")
     st.page_link("pages/1_dashboard.py", label="Dashboard Personale", icon="📊")
     st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")
+    st.page_link("pages/3_platinum_hunter.py", label="Platinum Hunter", icon="🏆")

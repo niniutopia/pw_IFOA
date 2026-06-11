@@ -24,25 +24,26 @@ def get_steam_id_from_vanity(api_key, vanity_url):
             return str(data["response"]["steamid"])
     return None
 
+
 def parse_steam_input(api_key, user_input):
-    """
-    Accetta sia Steam ID numerico che vanity URL.
-    Ritorna lo Steam ID valido o None se invalido.
+    # Rimuoviamo eventuali spazi vuoti invisibili prima e dopo
+    user_input = str(user_input).strip()
     
-    Accetta:
-    - Steam ID numerico: 76561198123456789
-    - Vanity URL completo: https://steamcommunity.com/id/username
-    - Vanity URL corto: username
-    """
-    user_input = user_input.strip()
-    
-    # Se è un numero di almeno 17 cifre, è probabilmente uno Steam ID
-    if user_input.isdigit() and len(user_input) >= 17:
+    # Se è già un ID numerico di 17 cifre, lo restituiamo subito senza chiamare Steam!
+    if user_input.isdigit() and len(user_input) == 17:
         return user_input
     
-    # Altrimenti, prova a convertire il vanity URL
-    steam_id = get_steam_id_from_vanity(api_key, user_input)
-    return steam_id
+    # Altrimenti, proviamo a risolverlo come Vanity URL
+    url = f"http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key={api_key}&vanityurl={user_input}"
+    try:
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        if data.get('response', {}).get('success') == 1:
+            return data['response']['steamid']
+    except Exception as e:
+        print(f"Errore nella risoluzione del profilo: {e}")
+        
+    return None
 
 @lru_cache(maxsize=100)
 def get_owned_games(api_key, steam_id):
@@ -264,3 +265,14 @@ def get_game_features(app_id):
         
     # Se il gioco è stato rimosso dallo store o fallisce la chiamata
     return {"is_multiplayer": False, "has_remote_play": False}
+
+
+def get_game_details(api_key, appid):
+    url = f"https://store.steampowered.com/api/appdetails?appids={appid}&language=it"
+    response = requests.get(url)
+    data = response.json()
+    if data and str(appid) in data and data[str(appid)]["success"]:
+        return data[str(appid)]["data"]
+    return None
+
+    import streamlit as st
