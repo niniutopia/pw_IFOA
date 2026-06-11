@@ -11,6 +11,26 @@ from utils import (
 
 st.set_page_config(page_title="Confronta Giocatori", page_icon="👥")
 
+# Stile CSS personalizzato
+st.markdown("""
+    <style>
+    .main-header {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    .subtitle {
+        font-size: 1.2rem;
+        color: #666;
+        margin-bottom: 2rem;
+    }
+    
+    /* Nasconde il menu di navigazione automatico */
+    [data-testid="stSidebarNav"] {
+        display: none;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("👥 Confronta Giocatori")
 st.write("Scopri i giochi in comune e i gusti di gioco con i tuoi amici")
 
@@ -361,3 +381,22 @@ if st.session_state.ricerca_avviata:
         
     else:
         st.success("✅ Il Giocatore 1 ha TUTTI i giochi del Giocatore 2!")
+
+# Sidebar con info
+with st.sidebar:
+    # 1. Il tuo titolo svetta in cima
+    st.markdown("### 🎮 Steam Buddy")
+    st.caption("Alimentato da Steam Web API")
+    st.divider() # Una bella linea di separazione
+    
+    # 2. I tuoi link di navigazione (nello stesso ordine in cui li vuoi tu)
+    st.write("Navigazione:")
+    
+    # Sostituisci 'main.py' con il nome reale del tuo file principale se è diverso
+    st.page_link("main.py", label="Home", icon="🏠")
+    
+    # Sostituisci il percorso e il nome con quelli reali della tua pagina 2
+    st.page_link("pages/1_dashboard.py", label="Dashboard Personale", icon="📊")
+    
+    # Aggiungi qui eventuali altre pagine...
+    st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")
