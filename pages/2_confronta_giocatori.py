@@ -1,12 +1,14 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import requests
 from utils import (
     get_owned_games,
     get_player_achievements,
     format_hours,
     validate_steam_id,
-    parse_steam_input
+    parse_steam_input,
+    get_player_name
 )
 
 st.set_page_config(page_title="Confronta Giocatori", page_icon="👥")
@@ -56,7 +58,6 @@ with col2:
 
 search_button = st.button("Confronta", use_container_width=True)
 
-
 with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
     st.markdown("""
     L'app accetta due formati:
@@ -93,9 +94,7 @@ with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
     - Verifica che il tuo Steam ID sia corretto
     - Assicurati che il tuo profilo sia impostato su **Public**
     - Attendi qualche minuto se hai appena reso pubblico il profilo
-    
                 """)
-
 
 # SE IL BOTTONE VIENE CLICCATO, SALVIAMO NELLA MEMORIA CHE LA RICERCA È PARTITA
 if search_button:
@@ -121,17 +120,21 @@ if st.session_state.ricerca_avviata:
     steam_id_1 = resolved_steam_id_1
     steam_id_2 = resolved_steam_id_2
     
-    # Recupera i dati
-    with st.spinner("📥 Sto recuperando i dati..."):
+    # Recupera i dati (e i veri nomi)
+    with st.spinner("📥 Sto recuperando i dati e i nomi utente..."):
+        # Prende i veri nickname da usare in tutta la UI
+        name_1 = get_player_name(API_KEY, steam_id_1)
+        name_2 = get_player_name(API_KEY, steam_id_2)
+        
         games_data_1 = get_owned_games(API_KEY, steam_id_1)
         games_data_2 = get_owned_games(API_KEY, steam_id_2)
     
     if not games_data_1 or "games" not in games_data_1:
-        st.error("❌ Profilo 1 privato o Steam ID non valido")
+        st.error(f"❌ Profilo di {name_1} privato o non valido")
         st.stop()
     
     if not games_data_2 or "games" not in games_data_2:
-        st.error("❌ Profilo 2 privato o Steam ID non valido")
+        st.error(f"❌ Profilo di {name_2} privato o non valido")
         st.stop()
     
     games_1 = games_data_1.get("games", [])
@@ -149,7 +152,7 @@ if st.session_state.ricerca_avviata:
     only_player_1 = apps_1 - apps_2
     only_player_2 = apps_2 - apps_1
     
-    st.success(f"✅ Dati caricati!")
+    st.success(f"✅ Dati caricati per **{name_1}** e **{name_2}**!")
     st.divider()
     
     # SEZIONE 1: STATISTICHE GENERALI
@@ -158,13 +161,13 @@ if st.session_state.ricerca_avviata:
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric("Giocatore 1", f"{len(games_1)} giochi")
+        st.metric(name_1, f"{len(games_1)} giochi")
     
     with col2:
         st.metric("🤝 Giochi in Comune", len(common_apps))
     
     with col3:
-        st.metric("Giocatore 2", f"{len(games_2)} giochi")
+        st.metric(name_2, f"{len(games_2)} giochi")
     
     st.divider()
     
@@ -180,14 +183,14 @@ if st.session_state.ricerca_avviata:
             common_games_data.append({
                 "appid": app_id,
                 "nome": g1.get("name", "Sconosciuto"),
-                "Ore G1": format_hours(g1.get("playtime_forever", 0)),
-                "Ore G2": format_hours(g2.get("playtime_forever", 0)),
-                "Minuti G1": g1.get("playtime_forever", 0),
-                "Minuti G2": g2.get("playtime_forever", 0),
+                f"Ore {name_1}": format_hours(g1.get("playtime_forever", 0)),
+                f"Ore {name_2}": format_hours(g2.get("playtime_forever", 0)),
+                f"Minuti {name_1}": g1.get("playtime_forever", 0),
+                f"Minuti {name_2}": g2.get("playtime_forever", 0),
             })
         
         # Ordina per tempo di gioco combinato
-        common_games_data.sort(key=lambda x: x["Minuti G1"] + x["Minuti G2"], reverse=True)
+        common_games_data.sort(key=lambda x: x[f"Minuti {name_1}"] + x[f"Minuti {name_2}"], reverse=True)
         
         df_common = pd.DataFrame(common_games_data)
         
@@ -196,7 +199,7 @@ if st.session_state.ricerca_avviata:
         
         with col_tab1:
             st.dataframe(
-                df_common[["nome", "Ore G1", "Ore G2"]],
+                df_common[["nome", f"Ore {name_1}", f"Ore {name_2}"]],
                 use_container_width=True,
                 hide_index=True
             )
@@ -207,16 +210,16 @@ if st.session_state.ricerca_avviata:
             
             fig = go.Figure(data=[
                 go.Bar(
-                    name="Giocatore 1",
+                    name=name_1,
                     y=top_common["nome"],
-                    x=top_common["Ore G1"],
+                    x=top_common[f"Ore {name_1}"],
                     orientation='h',
                     marker=dict(color='#1f77b4')
                 ),
                 go.Bar(
-                    name="Giocatore 2",
+                    name=name_2,
                     y=top_common["nome"],
-                    x=top_common["Ore G2"],
+                    x=top_common[f"Ore {name_2}"],
                     orientation='h',
                     marker=dict(color='#ff7f0e')
                 )
@@ -241,9 +244,9 @@ if st.session_state.ricerca_avviata:
                 with col1:
                     st.write(f"**{idx+1}. {row['nome']}**")
                 with col2:
-                    st.metric("G1", row["Ore G1"])
+                    st.metric(name_1, row[f"Ore {name_1}"])
                 with col3:
-                    st.metric("G2", row["Ore G2"])
+                    st.metric(name_2, row[f"Ore {name_2}"])
         
         st.divider()
         
@@ -277,16 +280,15 @@ if st.session_state.ricerca_avviata:
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.metric("G1: Sbloccati", len(achievements_1))
+                    st.metric(f"{name_1}: Sbloccati", len(achievements_1))
                 
                 with col2:
-                    st.metric("G2: Sbloccati", len(achievements_2))
+                    st.metric(f"{name_2}: Sbloccati", len(achievements_2))
                 
                 with col3:
                     st.metric("🤝 In Comune", len(common_achievements))
                 
                 with col4:
-                    # Manteniamo il calcolo del totale solo in background per la percentuale
                     pct = (len(common_achievements) / total_achievements * 100) if total_achievements > 0 else 0
                     st.metric("Sincronismo", f"{pct:.0f}%")
                 
@@ -295,13 +297,13 @@ if st.session_state.ricerca_avviata:
                 st.warning(f"❌ Impossibile recuperare gli achievement per {game_name}. Il gioco potrebbe non avere achievement o i profili non sono pubblici.")
     
     else:
-        st.warning("❌ Nessun gioco in comune! I due giocatori hanno gusti completamente diversi.")
+        st.warning(f"❌ Nessun gioco in comune! {name_1} e {name_2} hanno gusti completamente diversi.")
     
     st.divider()
     
     # SEZIONE 4: CONVINCILO A COMPRARLO
-    st.subheader("🎁 Convincilo a Comprarlo!")
-    st.write("Giochi che ha il Giocatore 1 ma non il Giocatore 2")
+    st.subheader(f"🎁 Convincilo a Comprarlo!")
+    st.write(f"Giochi che ha **{name_1}** ma non **{name_2}**")
     
     if only_player_1:
         player_1_only_data = []
@@ -336,7 +338,7 @@ if st.session_state.ricerca_avviata:
                     y=top_20["nome"],
                     x=top_20["Ore"],
                     orientation='h',
-                    marker=dict(color='#2ca02c'), # Verde per il G1
+                    marker=dict(color='#2ca02c'),
                     text=top_20["Ore"],
                     textposition='auto'
                 )
@@ -353,18 +355,18 @@ if st.session_state.ricerca_avviata:
         
         st.info(f"""
         **💡 Consiglio:**
-        Il Giocatore 1 ha {len(only_player_1)} giochi che il Giocatore 2 non possiede.
-        Il top è **{df_player_1_only.iloc[0]['nome']}** con **{df_player_1_only.iloc[0]['Ore']} ore** di gioco!
+        {name_1} ha {len(only_player_1)} giochi che {name_2} non possiede.
+        Il suo preferito è **{df_player_1_only.iloc[0]['nome']}** con ben **{df_player_1_only.iloc[0]['Ore']} ore** di gioco!
         """)
     
     else:
-        st.success("✅ Il Giocatore 2 ha TUTTI i giochi del Giocatore 1!")
+        st.success(f"✅ **{name_2}** ha TUTTI i giochi di **{name_1}**!")
     
     st.divider()
     
-    # SEZIONE 5: GIOCHI ESCLUSIVI GIOCATORE 2 (BUG FIXATO)
-    st.subheader("🎮 Giochi Esclusivi del Giocatore 2")
-    st.write("Giochi che ha il Giocatore 2 ma non il Giocatore 1")
+    # SEZIONE 5: GIOCHI ESCLUSIVI GIOCATORE 2
+    st.subheader(f"🎮 Giochi Esclusivi di {name_2}")
+    st.write(f"Giochi che ha **{name_2}** ma non **{name_1}**")
     
     if only_player_2:
         player_2_only_data = []
@@ -399,7 +401,7 @@ if st.session_state.ricerca_avviata:
                     y=top_20_p2["nome"],
                     x=top_20_p2["Ore"],
                     orientation='h',
-                    marker=dict(color='#d62728'), # Rosso/Arancio scuro per distinguerlo
+                    marker=dict(color='#d62728'),
                     text=top_20_p2["Ore"],
                     textposition='auto'
                 )
@@ -416,28 +418,21 @@ if st.session_state.ricerca_avviata:
             
         st.info(f"""
         **💡 Scoperta:**
-        Il Giocatore 2 ha {len(only_player_2)} giochi che potresti scroccare con il Family Sharing!
+        {name_2} ha {len(only_player_2)} giochi che potresti scroccare con il Family Sharing!
         Il suo titolo più giocato che tu non hai è **{df_player_2_only.iloc[0]['nome']}** con **{df_player_2_only.iloc[0]['Ore']} ore**.
         """)
         
     else:
-        st.success("✅ Il Giocatore 1 ha TUTTI i giochi del Giocatore 2!")
+        st.success(f"✅ **{name_1}** ha TUTTI i giochi di **{name_2}**!")
 
 # Sidebar con info
 with st.sidebar:
-    # 1. Il tuo titolo svetta in cima
     st.markdown("### 🎮 Steam Buddy")
     st.caption("Alimentato da Steam Web API")
-    st.divider() # Una bella linea di separazione
+    st.divider()
     
-    # 2. I tuoi link di navigazione (nello stesso ordine in cui li vuoi tu)
     st.write("Navigazione:")
     
-    # Sostituisci 'main.py' con il nome reale del tuo file principale se è diverso
     st.page_link("main.py", label="Home", icon="🏠")
-    
-    # Sostituisci il percorso e il nome con quelli reali della tua pagina 2
     st.page_link("pages/1_dashboard.py", label="Dashboard Personale", icon="📊")
-    
-    # Aggiungi qui eventuali altre pagine...
     st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")

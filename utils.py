@@ -154,3 +154,20 @@ def get_unplayed_games(games):
     unplayed_games = [g for g in games if g.get("playtime_forever", 0) == 0]
     
     return unplayed_games
+
+@lru_cache(maxsize=100)
+def get_player_name(api_key, steam_id):
+    """Interroga l'API di Steam per ottenere il vero nickname del giocatore"""
+    url = "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/"
+    params = {"key": api_key, "steamids": steam_id}
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            players = response.json().get("response", {}).get("players", [])
+            if players:
+                return players[0].get("personaname")
+    except Exception:
+        pass
+    
+    # Fallback nel caso in cui fallisse o il profilo non esista
+    return str(steam_id)
