@@ -171,3 +171,59 @@ def get_player_name(api_key, steam_id):
     
     # Fallback nel caso in cui fallisse o il profilo non esista
     return str(steam_id)
+
+@lru_cache(maxsize=100)
+def get_game_schema(api_key, app_id, language="italian"):
+    """
+    Recupera il 'dizionario' del gioco: nomi reali, descrizioni e icone degli achievement.
+    Il parametro 'language' traduce automaticamente i testi dove disponibile.
+    """
+    url = "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/"
+    params = {
+        "key": api_key,
+        "appid": app_id,
+        "l": language  # Chiediamo a Steam la localizzazione in italiano
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            # Navighiamo l'albero del JSON fino agli achievement
+            achievements = data.get("game", {}).get("availableGameStats", {}).get("achievements", [])
+            
+            # Creiamo un dizionario super veloce da consultare
+            # Chiave: nome interno (apiname) -> Valore: tutti i dettagli (titolo, descr, icone)
+            schema_dict = {}
+            for ach in achievements:
+                schema_dict[ach["name"]] = {
+                    "titolo": ach.get("displayName", "Senza Titolo"),
+                    "descrizione": ach.get("description", "Nessuna descrizione disponibile."),
+                    "icona_sbloccata": ach.get("icon"),
+                    "icona_bloccata": ach.get("icongray"),
+                    "nascosto": ach.get("hidden", 0) # 1 se è un achievement segreto
+                }
+            return schema_dict
+    except Exception:
+        pass
+        
+    return {}
+
+@lru_cache(maxsize=100)
+def get_achievement_percentages(app_id):
+    """Recupera le percentuali globali di rarità degli achievement per un gioco"""
+    url = "https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/"
+    params = {"gameid": app_id}
+    
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            achievements = data.get("achievementpercentages", {}).get("achievements", [])
+            
+            # Creiamo un dizionario veloce da leggere: { "codice_trofeo": 45.2 }
+            return {ach["name"]: ach["percent"] for ach in achievements}
+    except Exception:
+        pass
+        
+    return {}

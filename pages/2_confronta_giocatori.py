@@ -8,7 +8,9 @@ from utils import (
     format_hours,
     validate_steam_id,
     parse_steam_input,
-    get_player_name
+    get_player_name,
+    get_game_schema,              # 👈 Dizionario Testi
+    get_achievement_percentages
 )
 
 st.set_page_config(page_title="Confronta Giocatori", page_icon="👥")
@@ -251,8 +253,8 @@ if st.session_state.ricerca_avviata:
         
         st.divider()
         
-        # SEZIONE 3: ANALISI ACHIEVEMENT
-        st.subheader("🏅 Analisi Achievement")
+        # SEZIONE 3: ANALISI ACHIEVEMENTS
+        st.subheader("🏅 Analisi Achievements")
         
         st.info("Seleziona un gioco dalla lista dei giochi comuni per confrontare gli achievement")
         
@@ -263,44 +265,114 @@ if st.session_state.ricerca_avviata:
         )
         
         if selected_game:
-            # Estrai l'app_id
+            # Estrai l'app_id dal testo della selectbox
             app_id = int(selected_game.split("(AppID: ")[1].rstrip(")"))
             game_name = selected_game.split(" (AppID:")[0]
             
-            with st.spinner("📥 Recupero achievement..."):
+            with st.spinner("📥 Recupero achievement, testi e rarità..."):
+                # Dati sbloccati grezzi
                 ach_1 = get_player_achievements(API_KEY, steam_id_1, app_id)
                 ach_2 = get_player_achievements(API_KEY, steam_id_2, app_id)
+                
+                # I "Dizionari" che ci servono per tradurre i codici
+                schema = get_game_schema(API_KEY, app_id) 
+                rarity = get_achievement_percentages(app_id)
             
             if ach_1 and ach_2:
-                achievements_1 = {ach["apiname"] for ach in ach_1.get("achievements", []) if ach.get("achieved") == 1}
-                achievements_2 = {ach["apiname"] for ach in ach_2.get("achievements", []) if ach.get("achieved") == 1}
+                # 1. Estraiamo la lista dei codici effettivamente sbloccati
+                ach_unlocked_1 = [ach["apiname"] for ach in ach_1.get("achievements", []) if ach.get("achieved") == 1]
+                ach_unlocked_2 = [ach["apiname"] for ach in ach_2.get("achievements", []) if ach.get("achieved") == 1]
                 
-                total_achievements = len([ach for ach in ach_1.get("achievements", [])])
+                achievements_1 = set(ach_unlocked_1)
+                achievements_2 = set(ach_unlocked_2)
+                
+                total_achievements = len(ach_1.get("achievements", []))
                 common_achievements = achievements_1 & achievements_2
                 
+                # --- STATISTICHE BASE ---
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
                     st.metric(f"{name_1}: Sbloccati", len(achievements_1))
-                
                 with col2:
                     st.metric(f"{name_2}: Sbloccati", len(achievements_2))
-                
                 with col3:
                     st.metric("🤝 In Comune", len(common_achievements))
-                
                 with col4:
-                    pct = (len(common_achievements) / total_achievements * 100) if total_achievements > 0 else 0
-                    st.metric("Sincronismo", f"{pct:.0f}%")
+                    pct_sync = (len(common_achievements) / total_achievements * 100) if total_achievements > 0 else 0
+                    st.metric("Sincronismo", f"{pct_sync:.0f}%")
                 
-                st.success(f"✅ {game_name}: Achievement caricati!")
+            
+                # --- CALCOLO DEI TROFEI PIÙ RARI ---
+                
+                # Piccola funzione interna per trovare il più raro in una lista
+                def find_rarest(unlocked_list, rarity_dict):
+                    rarest_code = None
+                    rarest_pct = 101.0 # Partiamo oltre il 100%
+                    
+                    for code in unlocked_list:
+                        # 🔴 FIX: Forziamo la conversione in numero (float)
+                        try:
+                            pct = float(rarity_dict.get(code, 100.0))
+                        except (ValueError, TypeError):
+                            pct = 100.0
+                            
+                        if pct < rarest_pct:
+                            rarest_pct = pct
+                            rarest_code = code
+                    return rarest_code, rarest_pct
+
+                # Troviamo il vanto di ciascun giocatore
+                rarest_1, pct_1 = find_rarest(ach_unlocked_1, rarity)
+                rarest_2, pct_2 = find_rarest(ach_unlocked_2, rarity)
+                
+                col_r1, col_r2 = st.columns(2)
+                
+                with col_r1:
+                    st.write(f"**🏆 Il vanto di {name_1}:**")
+                    if rarest_1:
+                        titolo = schema.get(rarest_1, {}).get("titolo", rarest_1)
+                        descrizione = schema.get(rarest_1, {}).get("descrizione", "")
+                        st.info(f"**{titolo}**\n\n*{descrizione}*\n\n📈 Sbloccato dal **{pct_1:.1f}%** dei giocatori")
+                    else:
+                        st.info("Nessun achievement sbloccato.")
+                        
+                with col_r2:
+                    st.write(f"**🏆 Il vanto di {name_2}:**")
+                    if rarest_2:
+                        titolo = schema.get(rarest_2, {}).get("titolo", rarest_2)
+                        descrizione = schema.get(rarest_2, {}).get("descrizione", "")
+                        st.info(f"**{titolo}**\n\n*{descrizione}*\n\n📈 Sbloccato dal **{pct_2:.1f}%** dei giocatori")
+                    else:
+                        st.info("Nessun achievement sbloccato.")
+                        
+                # --- LISTA ACHIEVEMENT IN COMUNE ---
+                if common_achievements:
+                                        
+                    # Creiamo una lista arricchita per poterli mettere in ordine di rarità
+                    common_list = []
+                    for ach in common_achievements:
+                        # 🔴 FIX: Anche qui forziamo il numero per permettere un ordinamento corretto
+                        try:
+                            rarity_val = float(rarity.get(ach, 100.0))
+                        except (ValueError, TypeError):
+                            rarity_val = 100.0
+                            
+                        common_list.append({
+                            "titolo": schema.get(ach, {}).get("titolo", ach),
+                            "descrizione": schema.get(ach, {}).get("descrizione", ""),
+                            "rarita": rarity_val
+                        })
+                    
+                    # Ordiniamo la lista dal più difficile (percentuale più bassa) al più facile
+                    common_list.sort(key=lambda x: x["rarita"])
+                    
+                    with st.expander(f"Visualizza i {len(common_achievements)} trofei che avete sbloccato entrambi"):
+                        for ach_data in common_list:
+                            st.write(f"- **{ach_data['titolo']}** (Sbloccato dal {ach_data['rarita']:.1f}%): *{ach_data['descrizione']}*")          
+                st.success(f"✅ Achievement di {game_name} analizzati con successo!")
             else:
-                st.warning(f"❌ Impossibile recuperare gli achievement per {game_name}. Il gioco potrebbe non avere achievement o i profili non sono pubblici.")
-    
-    else:
-        st.warning(f"❌ Nessun gioco in comune! {name_1} e {name_2} hanno gusti completamente diversi.")
-    
-    st.divider()
+                st.warning(f"❌ Impossibile recuperare gli achievement per {game_name}. I profili potrebbero non essere pubblici o il gioco non ha trofei.")
     
     # SEZIONE 4: CONVINCILO A COMPRARLO
     st.subheader(f"🎁 Convincilo a Comprarlo!")
