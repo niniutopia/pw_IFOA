@@ -8,6 +8,11 @@ from utils import (
     get_game_details,
 )
 
+st.set_page_config(page_title="Platinum Hunter", page_icon="🏆")
+st.title("🏆 Platinum Hunter")
+st.write("Sei un completazionista e vuoi vedere quanti achievements (e quali) ti mancano per platinare un gioco? Carica la tua libreria e scoprilo!")
+
+
 # Stile CSS personalizzato
 st.markdown("""
     <style>
@@ -45,12 +50,8 @@ with st.sidebar:
     st.page_link("pages/3_platinum_hunter.py", label="Platinum Hunter", icon="🏆")
     
 
+
 # 1. DEFINISCI LA CHIAVE SUBITO
-
-st.set_page_config(page_title="Platinum Hunter", page_icon="🏆")
-st.title("🏆 Platinum Hunter")
-st.write("Sei un completazionista e vuoi vedere quanti achievements (e quali) ti mancano per platinare un gioco? Carica la tua libreria e scoprilo!")
-
 
 API_KEY = st.secrets["STEAM_API_KEY"]
 
