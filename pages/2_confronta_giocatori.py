@@ -9,7 +9,7 @@ from utils import (
     parse_steam_input
 )
 
-st.set_page_config(page_title="Confronta Giocatori", page_icon="👥")
+st.set_page_config(page_title="Confronta Giocatori", page_icon="👥", initial_sidebar_state="expanded")
 
 # Stile CSS personalizzato
 st.markdown("""
@@ -55,6 +55,39 @@ with col2:
     steam_id_2 = st.text_input("🎮 Steam ID/Vanity URL Giocatore 2:", placeholder="Username oppure 76561198...")
 
 search_button = st.button("Confronta", use_container_width=True)
+
+
+with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
+    st.markdown("""
+    L'app accetta due formati:
+
+    ### Formato 1: Steam ID Numerico (32-bit)
+    - **Esempio**: `76561198123456666` (17 cifre)
+    - Puoi trovarlo sul tuo profilo, sono le cifre alla fine dell'url `https://steamcommunity.com/profiles/76561198123456666`
+    - **Più affidabile**, funziona sempre se il profilo è pubblico
+
+    ### Formato 2: Vanity URL (Custom URL)
+    - **Esempio**: `https://steamcommunity.com/id/username` oppure solo `username`
+    - Se hai impostato un custom URL su Steam, puoi usarlo direttamente
+    - **Più comodo**, basta inserire il tuo nome utente Steam
+    - Se non hai un Vanity URL personalizzato, usa lo Steam ID numerico
+
+    #### Come impostare un Vanity URL:
+    1. Vai a https://steamcommunity.com/my/edit/settings
+    2. Clicca su "Custom URL"
+    3. Scegli un nome univoco
+    4. Ora puoi usare `https://steamcommunity.com/id/tuonome`
+
+    ## 🔐 Privacy & Profili Pubblici
+
+    **⚠️ Importante:** Affinché l'app funzioni correttamente, il tuo profilo Steam deve essere **pubblico**.
+
+    Per rendere il profilo pubblico:
+    1. Vai a https://steamcommunity.com/my/edit/settings
+    2. Vai a "Privacy settings"
+    3. Assicurati che "Game details", "Playtime statistics" e "Library visibility" siano impostati su **Public**
+    """)
+
 
 # SE IL BOTTONE VIENE CLICCATO, SALVIAMO NELLA MEMORIA CHE LA RICERCA È PARTITA
 if search_button:

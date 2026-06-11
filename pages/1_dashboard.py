@@ -13,7 +13,7 @@ from utils import (
     get_unplayed_games
 )
 
-st.set_page_config(page_title="Dashboard", page_icon="📊")
+st.set_page_config(page_title="Dashboard", page_icon="📊", initial_sidebar_state="expanded")
 
 # Stile CSS personalizzato
 st.markdown("""
@@ -38,6 +38,7 @@ st.markdown("""
 st.title("📊 Dashboard Personale")
 st.write("Analizza le tue statistiche di gioco Steam")
 
+
 # Inizializza la API key
 API_KEY = st.secrets["STEAM_API_KEY"]
 
@@ -47,6 +48,38 @@ with col1:
     steam_id = st.text_input("🔍 Inserisci Steam ID o Vanity URL:", placeholder="Username oppure 76561198...")
 with col2:
     search_button = st.button("Cerca", use_container_width=True)
+
+with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
+    st.markdown("""
+    L'app accetta due formati:
+
+    ### Formato 1: Steam ID Numerico (32-bit)
+    - **Esempio**: `76561198123456666` (17 cifre)
+    - Puoi trovarlo sul tuo profilo, sono le cifre alla fine dell'url `https://steamcommunity.com/profiles/76561198123456666`
+    - **Più affidabile**, funziona sempre se il profilo è pubblico
+
+    ### Formato 2: Vanity URL (Custom URL)
+    - **Esempio**: `https://steamcommunity.com/id/username` oppure solo `username`
+    - Se hai impostato un custom URL su Steam, puoi usarlo direttamente
+    - **Più comodo**, basta inserire il tuo nome utente Steam
+    - Se non hai un Vanity URL personalizzato, usa lo Steam ID numerico
+
+    #### Come impostare un Vanity URL:
+    1. Vai a https://steamcommunity.com/my/edit/settings
+    2. Clicca su "Custom URL"
+    3. Scegli un nome univoco
+    4. Ora puoi usare `https://steamcommunity.com/id/tuonome`
+
+    ## 🔐 Privacy & Profili Pubblici
+
+    **⚠️ Importante:** Affinché l'app funzioni correttamente, il tuo profilo Steam deve essere **pubblico**.
+
+    Per rendere il profilo pubblico:
+    1. Vai a https://steamcommunity.com/my/edit/settings
+    2. Vai a "Privacy settings"
+    3. Assicurati che "Game details", "Playtime statistics" e "Library visibility" siano impostati su **Public**
+    """)
+
 
 if search_button or steam_id:
     if not steam_id:
@@ -302,3 +335,5 @@ with st.sidebar:
     
     # Aggiungi qui eventuali altre pagine...
     st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")
+
+    
