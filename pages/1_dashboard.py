@@ -78,6 +78,15 @@ with st.expander("📍 Come Trovare lo Steam ID o Vanity URL"):
     1. Vai a https://steamcommunity.com/my/edit/settings
     2. Vai a "Privacy settings"
     3. Assicurati che "Game details", "Playtime statistics" e "Library visibility" siano impostati su **Public**
+    
+    ## 🐛 Troubleshooting
+
+    ##### "Profilo privato o Steam ID non valido"
+    - Verifica che il tuo Steam ID sia corretto
+    - Assicurati che il tuo profilo sia impostato su **Public**
+    - Attendi qualche minuto se hai appena reso pubblico il profilo
+
+                            
     """)
 
 
