@@ -263,8 +263,10 @@ if submit_profilo or steam_id:
     top_games_all_time = get_top_games_by_playtime(games, limit=10)
     
     if top_games_all_time:
+        # Aggiungiamo l'appid al DataFrame per poter recuperare le immagini!
         df_all_time = pd.DataFrame([
             {
+                "appid": g.get("appid"),
                 "🎮 Gioco": g.get("name", "Sconosciuto"),
                 "⏱️ Ore": format_hours(g.get("playtime_forever", 0)),
                 "Minuti": g.get("playtime_forever", 0)
@@ -272,34 +274,57 @@ if submit_profilo or steam_id:
             for g in top_games_all_time
         ])
         
-        # Grafico a barre
-        fig_bar = go.Figure(data=[
-            go.Bar(
-                y=df_all_time["🎮 Gioco"],
-                x=df_all_time["⏱️ Ore"],
-                orientation='h',
-                marker=dict(color='#1f77b4'),
-                text=df_all_time["⏱️ Ore"],
-                textposition='auto',
-                hovertemplate="<b>%{y}</b><br>Ore: %{x}<extra></extra>"
+        # --- CREAZIONE COLONNA IMMAGINI ---
+        if "appid" in df_all_time.columns:
+            df_all_time["Icona"] = df_all_time["appid"].apply(
+                lambda x: f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{x}/capsule_231x87.jpg"
             )
-        ])
+        else:
+            df_all_time["Icona"] = ""
         
-        fig_bar.update_layout(
-            height=400,
-            yaxis={'categoryorder': 'total ascending'},
-            xaxis_title="Ore di gioco",
-            showlegend=False
-        )
+        # --- VISUALIZZAZIONE A TABS ---
+        col_tab1, col_tab2 = st.tabs(["🔥 Top 10", "📊 Grafico"])
         
-        st.plotly_chart(fig_bar, use_container_width=True)
-        
-        with st.expander("📋 Dettagli tabella"):
-            st.dataframe(
-                df_all_time[["🎮 Gioco", "⏱️ Ore"]],
-                use_container_width=True,
-                hide_index=True
+        with col_tab1:
+            st.write("**I tuoi 10 giochi più giocati di sempre:**")
+            
+            for idx, row in df_all_time.iterrows():
+                # Abbiamo 3 colonne: Immagine (1.5), Titolo (3) e Ore (1.5)
+                col_img, col1, col2 = st.columns([1.5, 3, 1.5]) 
+                
+                with col_img:
+                    if row["Icona"]:
+                        st.image(row["Icona"], use_container_width=True)
+                with col1:
+                    st.write(f"**{idx+1}. {row['🎮 Gioco']}**")
+                with col2:
+                    st.metric("Ore di gioco", row["⏱️ Ore"])
+                
+                st.divider() # Linea di separazione tra un gioco e l'altro
+                
+        with col_tab2:
+            # Grafico a barre
+            fig_bar = go.Figure(data=[
+                go.Bar(
+                    y=df_all_time["🎮 Gioco"],
+                    x=df_all_time["⏱️ Ore"],
+                    orientation='h',
+                    marker=dict(color='#1f77b4'),
+                    text=df_all_time["⏱️ Ore"],
+                    textposition='auto',
+                    hovertemplate="<b>%{y}</b><br>Ore: %{x}<extra></extra>"
+                )
+            ])
+            
+            fig_bar.update_layout(
+                height=400,
+                yaxis={'categoryorder': 'total ascending'},
+                xaxis_title="Ore di gioco",
+                showlegend=False
             )
+            
+            st.plotly_chart(fig_bar, use_container_width=True)
+            
     else:
         st.info("Nessun gioco giocato ancora")
     
@@ -317,63 +342,81 @@ if submit_profilo or steam_id:
     top_games_recent = get_top_games_by_recent_playtime(games, limit=10)
     
     if top_games_recent:
+        # Aggiungiamo l'appid al DataFrame per recuperare le immagini!
         df_recent = pd.DataFrame([
             {
+                "appid": g.get("appid"),
                 "🎮 Gioco": g.get("name", "Sconosciuto"),
                 "⏱️ Ore (2 sett.)": format_hours(g.get("playtime_2weeks", 0))
             }
             for g in top_games_recent
         ])
         
-        fig_recent = go.Figure(data=[
-            go.Bar(
-                y=df_recent["🎮 Gioco"],
-                x=df_recent["⏱️ Ore (2 sett.)"],
-                orientation='h',
-                marker=dict(color='#ff7f0e'),
-                text=df_recent["⏱️ Ore (2 sett.)"],
-                textposition='auto',
-                hovertemplate="<b>%{y}</b><br>Ore: %{x}<extra></extra>"
+        # --- CREAZIONE COLONNA IMMAGINI ---
+        if "appid" in df_recent.columns:
+            df_recent["Icona"] = df_recent["appid"].apply(
+                lambda x: f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{x}/capsule_231x87.jpg"
             )
-        ])
+        else:
+            df_recent["Icona"] = ""
+            
+        # --- VISUALIZZAZIONE A TABS ---
+        col_tab1, col_tab2 = st.tabs(["🔥 Più Giocati di Recente", "📊 Grafico"])
         
-        fig_recent.update_layout(
-            height=400,
-            yaxis={'categoryorder': 'total ascending'},
-            xaxis_title="Ore di gioco",
-            showlegend=False
-        )
-        
-        st.plotly_chart(fig_recent, use_container_width=True)
-        
-        with st.expander("📋 Dettagli tabella"):
-            st.dataframe(
-                df_recent,
-                use_container_width=True,
-                hide_index=True
+        with col_tab1:
+            st.write("**I titoli a cui hai dedicato più tempo negli ultimi 14 giorni:**")
+            
+            for idx, row in df_recent.iterrows():
+                # Stesso layout a 3 colonne pulito della sezione precedente
+                col_img, col1, col2 = st.columns([1.5, 3, 1.5]) 
+                
+                with col_img:
+                    if row["Icona"]:
+                        st.image(row["Icona"], use_container_width=True)
+                with col1:
+                    st.write(f"**{idx+1}. {row['🎮 Gioco']}**")
+                with col2:
+                    st.metric("Ore (Ultime 2 sett.)", row["⏱️ Ore (2 sett.)"])
+                
+                st.divider() # Linea di separazione
+                
+        with col_tab2:
+            # Grafico a barre
+            fig_recent = go.Figure(data=[
+                go.Bar(
+                    y=df_recent["🎮 Gioco"],
+                    x=df_recent["⏱️ Ore (2 sett.)"],
+                    orientation='h',
+                    marker=dict(color='#ff7f0e'),
+                    text=df_recent["⏱️ Ore (2 sett.)"],
+                    textposition='auto',
+                    hovertemplate="<b>%{y}</b><br>Ore: %{x}<extra></extra>"
+                )
+            ])
+            
+            fig_recent.update_layout(
+                height=400,
+                yaxis={'categoryorder': 'total ascending'},
+                xaxis_title="Ore di gioco",
+                showlegend=False
             )
+            
+            st.plotly_chart(fig_recent, use_container_width=True)
+            
     else:
         st.info("Non hai giocato negli ultimi 14 giorni a nessuno dei tuoi giochi")
     
-    st.divider()
-    
-    # SEZIONE 5: STATISTICHE EXTRA
-    with st.expander("📊 Statistiche Avanzate"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Media ore per gioco (giocati):**")
-            if played_games > 0:
-                avg_hours = total_hours / played_games
-                st.info(f"{avg_hours:.1f} ore")
-            else:
-                st.info("N/A")
-        
-        with col2:
-            st.write("**Gioco più giocato:**")
-            if top_games_all_time:
-                most_played = top_games_all_time[0]
-                st.success(f"{most_played.get('name', 'Sconosciuto')}: {format_hours(most_played.get('playtime_forever', 0))} ore")
+    # --- CALCOLO MEDIA GIORNALIERA RECENTE ---
+# Sommiamo tutti i minuti giocati nelle ultime 2 settimane
+minuti_totali_2_settimane = sum(g.get("playtime_2weeks", 0) for g in games)
+
+# Convertiamo in ore e dividiamo per 14 giorni
+media_ore_giornaliere = (minuti_totali_2_settimane / 60) / 14
+
+st.info(f"""
+        💡 La tua media giornaliera nelle ultime settimane:
+        {media_ore_giornaliere:.1f} ore al giorno!
+        """)
 
 # Sidebar con info
 with st.sidebar:

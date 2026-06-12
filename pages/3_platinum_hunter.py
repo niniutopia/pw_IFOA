@@ -92,11 +92,16 @@ with st.form("form_profilo"):
                     st.session_state.active_sid = sid
                     data = get_owned_games(API_KEY, sid)
                     st.session_state.my_games = data.get("games", [])
+                    
                     st.rerun() 
+                    
                 else:
                     st.error("❌ ID o Link non valido. Controlla e riprova.")
         else:
             st.warning("⚠️ Per favore, inserisci un ID o un link.")
+
+if st.session_state.active_sid:
+    st.success(f"✅ Dati del profilo caricati!")
 
 # INFO STEAMID
 with st.expander("📍 Cosa sono lo Steam ID o Vanity URL"):
@@ -140,6 +145,8 @@ with st.expander("📍 Cosa sono lo Steam ID o Vanity URL"):
 
                             
     """)
+
+
 
 # --- 2. SEZIONI DI RICERCA ---
 st.subheader("2. Scegli il gioco")
