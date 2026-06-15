@@ -39,10 +39,30 @@ st.markdown("""
 st.title("📊 Dashboard Personale")
 st.write("Analizza le tue statistiche di gioco Steam")
 
+# Sidebar con info
+with st.sidebar:
+    st.markdown("### 🎮 Steam Buddy")
+    st.caption("Alimentato da Steam Web API")
+    st.divider()
+    
+    st.write("Navigazione:")
+    
+    st.page_link("main.py", label="Home", icon="🏠")
+    st.page_link("pages/1_dashboard.py", label="Dashboard Personale", icon="📊")
+    st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")
+    st.page_link("pages/3_platinum_hunter.py", label="Platinum Hunter", icon="🏆")
 
 # Richiamo la API key
 API_KEY = st.secrets["STEAM_API_KEY"]
 
+# ==========================================
+# 🟢 INIZIALIZZAZIONE MEMORIA (DEVE STARE QUI!)
+# ==========================================
+if "my_games" not in st.session_state: 
+    st.session_state.my_games = []
+    
+if "active_sid" not in st.session_state: 
+    st.session_state.active_sid = None
 
 # --- 1. CARICAMENTO PROFILO ---
 with st.form("form_profilo"):
@@ -125,56 +145,49 @@ with st.expander("📍 Cosa sono lo Steam ID o Vanity URL"):
                             
     """)
 
-# bottone
-if submit_profilo or steam_id:
-    if not steam_id:
-        st.warning("Per favore, inserisci uno Steam ID, un Vanity URL o il link del profilo")
-        st.stop()
+# ==========================================
+# 🟢 LETTURA DATI E STATISTICHE (Scatta solo se c'è un ID in memoria)
+# ==========================================
+if st.session_state.active_sid:
+    # Recuperiamo la lista giochi dalla memoria
+    games = st.session_state.my_games
     
-    # --- ESTRAZIONE DA URL ---
-    # Puliamo l'input da spazi e slash finali accidentali
-    clean_input = steam_id.strip().strip("/")
-    
-    # 1. Controlla se è un URL /profiles/ (ID Numerico)
-    match_profiles = re.search(r'steamcommunity\.com/profiles/(\d+)', clean_input)
-    if match_profiles:
-        clean_input = match_profiles.group(1)
-    else:
-        # 2. Controlla se è un URL /id/ (Vanity Name)
-        match_id = re.search(r'steamcommunity\.com/id/([^/]+)', clean_input)
-        if match_id:
-            clean_input = match_id.group(1)
-    # -------------------------
-
-    # Prova a risolvere l'input pulito (ora supporta ID, Vanity e URL completi)
-    with st.spinner("🔄 Sto risolvendo il tuo profilo..."):
-        resolved_steam_id = parse_steam_input(API_KEY, clean_input)
-    
-    if not resolved_steam_id:
-        st.error("❌ Steam ID, Vanity URL o Link non valido. Assicurati che:\n- L'ID o il link sia corretto\n- Il profilo sia pubblico")
-        st.stop()
-    
-    steam_id = resolved_steam_id
-
-
-    # Recupera i dati
-    with st.spinner("📥 Sto recuperando i tuoi dati da Steam..."):
-        games_data = get_owned_games(API_KEY, steam_id)
-    
-    if not games_data or "games" not in games_data:
-        st.error("❌ Profilo privato o Steam ID non valido. Assicurati che il tuo profilo sia pubblico.")
-        st.stop()
-    
-    games = games_data.get("games", [])
-    
-    if not games:
-        st.info("📭 Non hai giochi nel tuo account")
-        st.stop()
-    
-    st.success(f"✅ Dati caricati! {len(games)} giochi trovati")
+    st.success(f"✅ Dati del profilo caricati! Trovati {len(games)} giochi.")
     st.divider()
     
+    # --- CALCOLO MEDIA GIORNALIERA RECENTE ---
+    # Sommiamo tutti i minuti giocati nelle ultime 2 settimane
+    minuti_totali_2_settimane = sum(g.get("playtime_2weeks", 0) for g in games)
+
+    # Convertiamo in ore e dividiamo per 14 giorni
+    media_ore_giornaliere = (minuti_totali_2_settimane / 60) / 14
+
+    # --- STAMPA DELLE METRICHE GLOBALI ---
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric("🎮 Giochi Totali", len(games))
+        
+    with col2:
+        st.metric("⏱️ Media di gioco attuale", f"{media_ore_giornaliere:.1f} ore / giorno", help="Calcolata sugli ultimi 14 giorni")
+        
+    st.divider()
+    
+    # [Da qui in poi puoi inserire il resto della tua dashboard: Top 10, Grafici, ecc.]    
+    
+    
+    # ==========================================
+    # 🛑 BLOCCO DI SICUREZZA
+    # ==========================================
+    # Se non c'è nessun ID in memoria, fermiamo la pagina qui e aspettiamo
+    if not st.session_state.active_sid:
+        st.info("👆 Inserisci un ID, un Vanity URL o un Link qui sopra per avviare l'analisi!")
+        st.stop() # <-- Questo comando dice a Streamlit: "Non leggere il resto del file!"
+
+        
     # SEZIONE 1: METRICHE PRINCIPALI
+
+    
     st.subheader("📈 Statistiche Generali")
     
     col1, col2, col3, col4 = st.columns(4)
@@ -407,32 +420,15 @@ if submit_profilo or steam_id:
         st.info("Non hai giocato negli ultimi 14 giorni a nessuno dei tuoi giochi")
     
     # --- CALCOLO MEDIA GIORNALIERA RECENTE ---
-# Sommiamo tutti i minuti giocati nelle ultime 2 settimane
-minuti_totali_2_settimane = sum(g.get("playtime_2weeks", 0) for g in games)
+    # Sommiamo tutti i minuti giocati nelle ultime 2 settimane
+    minuti_totali_2_settimane = sum(g.get("playtime_2weeks", 0) for g in games)
 
-# Convertiamo in ore e dividiamo per 14 giorni
-media_ore_giornaliere = (minuti_totali_2_settimane / 60) / 14
+    # Convertiamo in ore e dividiamo per 14 giorni
+    media_ore_giornaliere = (minuti_totali_2_settimane / 60) / 14
 
-st.info(f"""
-        💡 La tua media giornaliera nelle ultime settimane:
-        {media_ore_giornaliere:.1f} ore al giorno!
-        """)
-
-# Sidebar con info
-with st.sidebar:
-    # Titolo
-    st.markdown("### 🎮 Steam Buddy")
-    st.caption("Alimentato da Steam Web API")
-
-    st.divider() # separazione
-    
-    # Menù di navigazione
-    st.write("Navigazione:")
-
-    st.page_link("main.py", label="Home", icon="🏠")
-    st.page_link("pages/1_dashboard.py", label="Dashboard Personale", icon="📊")
-    st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")
-    st.page_link("pages/3_platinum_hunter.py", label="Platinum Hunter", icon="🏆")
-    
+    st.info(f"""
+            💡 La tua media giornaliera nelle ultime settimane:
+            {media_ore_giornaliere:.1f} ore al giorno!
+            """)
 
     

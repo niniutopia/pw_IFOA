@@ -69,6 +69,50 @@ with st.form("form_confronto"):
     # Il bottone posizionato sotto le due colonne
     search_button = st.form_submit_button("Confronta", use_container_width=True)
     
+
+# INFO STEAMID
+with st.expander("📍 Cosa sono lo Steam ID o Vanity URL"):
+    st.markdown("""
+    L'app accetta i sequenti formati:
+
+    ### L'url del tuo profilo
+    - **Esempio**: `https://steamcommunity.com/profiles/76561197960434622`
+                
+    ### Steam ID Numerico (32-bit)
+    - **Esempio**: `76561197960434622` (17 cifre)
+    - **Più affidabile**, funziona sempre se il profilo è pubblico
+
+    ### Vanity URL (Custom URL)
+    - **Esempio**: `https://steamcommunity.com/id/username` oppure solo `username`
+    - Se hai impostato un custom URL su Steam, puoi usarlo direttamente
+    - **Più comodo**, basta inserire il tuo nome utente Steam
+    - Se non hai un Vanity URL personalizzato, usa lo Steam ID numerico
+
+    #### Come impostare un Vanity URL:
+    1. Vai a https://steamcommunity.com/my/edit/settings
+    2. Clicca su "Custom URL"
+    3. Scegli un nome univoco
+    4. Ora puoi usare `https://steamcommunity.com/id/tuonome`
+
+    ## 🔐 Privacy & Profili Pubblici
+
+    **⚠️ Importante:** Affinché l'app funzioni correttamente, il tuo profilo Steam deve essere **pubblico**.
+
+    Per rendere il profilo pubblico:
+    1. Vai a https://steamcommunity.com/my/edit/settings
+    2. Vai a "Privacy settings"
+    3. Assicurati che "Game details", "Playtime statistics" e "Library visibility" siano impostati su **Public**
+    
+    ## 🐛 Troubleshooting
+
+    ##### "Profilo privato o Steam ID non valido"
+    - Verifica che il tuo Steam ID sia corretto
+    - Assicurati che il tuo profilo sia impostato su **Public**
+    - Attendi qualche minuto se hai appena reso pubblico il profilo
+
+                            
+    """)
+
     if search_button:
         if steam_input_1 and steam_input_2:
             # --- PULIZIA E REGEX GIOCATORE 1 ---
@@ -356,17 +400,14 @@ if st.session_state.ricerca_avviata:
                 st.divider()
                 
                 # --- STATISTICHE BASE ---
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3 = st.columns(3)
                 
                 with col1:
-                    st.metric(f"{name_1}: Sbloccati", len(achievements_1))
+                    st.metric(f"Sbloccati da {name_1}", len(achievements_1))
                 with col2:
-                    st.metric(f"{name_2}: Sbloccati", len(achievements_2))
+                    st.metric(f"Sbloccati da {name_2}", len(achievements_2))
                 with col3:
                     st.metric("🤝 In Comune", len(common_achievements))
-                with col4:
-                    pct_sync = (len(common_achievements) / total_achievements * 100) if total_achievements > 0 else 0
-                    st.metric("Sincronismo", f"{pct_sync:.0f}%")
      
                 # --- CALCOLO DEI TROFEI PIÙ RARI ---
                                 
