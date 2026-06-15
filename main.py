@@ -50,18 +50,36 @@ st.markdown('<div class="subtitle">Una panoramica del tuo account di steam, conf
 
 # Testo/body
 st.markdown("""
-    **Benvenuto!** 👋
-            
-    Steam Buddy è un'app per analizare le tue statistiche di gioco Steam in modo visivo e confrontarti con i tuoi amici.
-    Cosa puoi vedere:
-    - Quanti giochi ancora non toccati hai nel tuo account?
-    - A cosa giochi di più?
-    - Che giochi avete in comune tu ed i tuoi amici?
-    - Chi ha sbloccato più achievements?
-    - Quali achievements ti mancano per platinare un gioco?
-    
-    Naviga usando le pagine nel menu a sinistra.
-    """)
+### **Benvenuto!** 👋            
+Una dashboard Streamlit per analizzare le tue statistiche di gioco Steam  in modo visivo, confrontarle con i tuoi amici e scoprire cosa manca per "platinare" un gioco.
+           
+### 🧩 **Funzionalità**
+
+##### Dashboard Personale
+- **Statistiche Generali**: Numero giochi posseduti, giocati, tempo totale
+- **Grafico Ciambella**: Rapporto visivo tra giochi posseduti e giocati
+- **Top 10 Giochi di Sempre**: Classifica dei giochi più giocati con grafico interattivo
+- **Top Giochi Ultime 2 Settimane**: Attività di gioco recente
+
+##### Confronta Giocatori
+- **Giochi in Comune**: Vedi quali giochi condividete con gli amici
+- **Grafico di Confronto**: Confronto visivo delle ore giocate per ogni gioco in comune
+- **Analisi Achievement**: Confronto degli achievement sbloccati nei giochi comuni
+- **Convincilo a Comprarlo**: Lista dei tuoi giochi migliori che il tuo amico non ha ancora
+- **Giochi Esclusivi**: Vedi cosa ha il tuo amico che tu non hai
+
+##### Platinum Hunter
+- **Analisi achievements**: Vedi quanti achievements ti mancano per platinare un gioco
+- **Obiettivi chieri**: Lista degli achievements in chiaro con i relativi testi
+- **Obiettivi segreti**: Lista degli obiettivi senza descrizione
+
+### 🔌 API Utilizzate
+
+- **GetOwnedGames**: Recupera la lista di giochi posseduti e ore giocate
+- **GetRecentlyPlayedGames**: Giochi giocati recentemente
+- **GetPlayerAchievements**: Achievement sbloccati per un gioco
+
+""")
 
 
     

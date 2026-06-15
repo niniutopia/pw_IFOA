@@ -1,5 +1,5 @@
 # Steam Buddies - Multi-Page Dashboard
-Una dashboard Streamlit per analizzare le tue statistiche di gioco Steam  in modo visivo e confrontare i gusti di gioco con i tuoi amici.
+Una dashboard Streamlit per analizzare le tue statistiche di gioco Steam  in modo visivo, confrontarle con i tuoi amici e scoprire cosa manca per "platinare" un gioco.
 
 ## Funzionalità
 
@@ -8,7 +8,6 @@ Una dashboard Streamlit per analizzare le tue statistiche di gioco Steam  in mod
 - **Grafico Ciambella**: Rapporto visivo tra giochi posseduti e giocati
 - **Top 10 Giochi di Sempre**: Classifica dei giochi più giocati con grafico interattivo
 - **Top Giochi Ultime 2 Settimane**: Attività di gioco recente
-- **Statistiche Avanzate**: Media ore per gioco, gioco più giocato
 
 ### Confronta Giocatori
 - **Giochi in Comune**: Vedi quali giochi condividete con gli amici
@@ -16,6 +15,11 @@ Una dashboard Streamlit per analizzare le tue statistiche di gioco Steam  in mod
 - **Analisi Achievement**: Confronto degli achievement sbloccati nei giochi comuni
 - **Convincilo a Comprarlo**: Lista dei tuoi giochi migliori che il tuo amico non ha ancora
 - **Giochi Esclusivi**: Vedi cosa ha il tuo amico che tu non hai
+
+### Platinum Hunter
+- **Analisi achievements**: Vedi quanti achievements ti mancano per platinare un gioco
+- **Obiettivi chieri**: Lista degli achievements in chiaro con i relativi testi
+- **Obiettivi segreti**: Lista degli obiettivi senza descrizione
 
 ## 🔌 API Utilizzate
 
@@ -27,4 +31,4 @@ Una dashboard Streamlit per analizzare le tue statistiche di gioco Steam  in mod
 
 - Statistiche avanzate di gioco (genere, developer, etc.)
 - Suggerimenti di giochi basati sui gusti comuni
-- Traduzione in inglese
+- Traduzione in inglese?
