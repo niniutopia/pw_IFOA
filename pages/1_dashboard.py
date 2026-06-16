@@ -1,3 +1,6 @@
+ # ==========================================
+ # Import
+ # ==========================================
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -14,7 +17,13 @@ from utils import (
     get_unplayed_games,
 )
 
-st.set_page_config(page_title="Dashboard", page_icon="📊")
+ # ==========================================
+ # Configurazione della pagina
+ # ==========================================
+st.set_page_config(
+    page_title="Dashboard",
+    page_icon="📊"
+    )
 
 # Stile CSS personalizzato
 st.markdown("""
@@ -36,10 +45,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Dashboard Personale")
-st.write("Analizza le tue statistiche di gioco Steam")
-
-# Sidebar con info
+# Sidebar con menu
 with st.sidebar:
     st.markdown("### 🎮 Steam Buddy")
     st.caption("Alimentato da Steam Web API")
@@ -52,11 +58,18 @@ with st.sidebar:
     st.page_link("pages/2_confronta_giocatori.py", label="Confronta Giocatori", icon="👥")
     st.page_link("pages/3_platinum_hunter.py", label="Platinum Hunter", icon="🏆")
 
-# Richiamo la API key
+
+# ==========================================
+st.title("📊 Dashboard Personale")
+st.write("Analizza le tue statistiche di gioco Steam")
+
+# ==========================================
+# API key
+# ==========================================
 API_KEY = st.secrets["STEAM_API_KEY"]
 
 # ==========================================
-# 🟢 INIZIALIZZAZIONE MEMORIA (DEVE STARE QUI!)
+# INIZIALIZZAZIONE MEMORIA
 # ==========================================
 if "my_games" not in st.session_state: 
     st.session_state.my_games = []
@@ -64,21 +77,24 @@ if "my_games" not in st.session_state:
 if "active_sid" not in st.session_state: 
     st.session_state.active_sid = None
 
-# --- 1. CARICAMENTO PROFILO ---
+# ==========================================
+# CARICAMENTO PROFILO
+# ==========================================
+
 with st.form("form_profilo"):
     steam_id = st.text_input(
         "🔍 Inserisci Steam ID, Vanity URL o Link del profilo:", 
         placeholder="Es. 76561198... oppure https://steamcommunity.com/id/tuonome"
     )
     
-    # Il bottone ora si trova sotto l'input
     submit_profilo = st.form_submit_button("Cerca", use_container_width=True)
     
     if submit_profilo:
         if steam_id:
-            # --- 1. PULIZIA E REGEX (Tutto dentro il form!) ---
+            # PULIZIA E REGEX (Tutto dentro il form!)
             clean_input = steam_id.strip().strip("/")
             
+            # con (\d+) prenndo tutti i numeri dopo quella sequenza specifica
             match_profiles = re.search(r'steamcommunity\.com/profiles/(\d+)', clean_input)
             if match_profiles:
                 clean_input = match_profiles.group(1)
@@ -87,7 +103,7 @@ with st.form("form_profilo"):
                 if match_id:
                     clean_input = match_id.group(1)
             
-            # --- 2. CHIAMATA API ---
+            # CHIAMATA API
             with st.spinner("🔄 Risoluzione profilo e recupero dati..."):
                 sid = parse_steam_input(API_KEY, clean_input)
                 
@@ -102,7 +118,10 @@ with st.form("form_profilo"):
         else:
             st.warning("⚠️ Per favore, inserisci un ID o un link.")
 
-# INFO STEAMID
+# ==========================================
+# INFO STEAMID 
+# ==========================================
+
 with st.expander("📍 Cosa sono lo Steam ID o Vanity URL"):
     st.markdown("""
     L'app accetta i sequenti formati:
@@ -144,25 +163,26 @@ with st.expander("📍 Cosa sono lo Steam ID o Vanity URL"):
 
                             
     """)
+# ==========================================
+
 
 # ==========================================
-# 🟢 LETTURA DATI E STATISTICHE (Scatta solo se c'è un ID in memoria)
+# LETTURA DATI E STATISTICHE (Scatta solo se c'è un ID in memoria)
 # ==========================================
 if st.session_state.active_sid:
-    # Recuperiamo la lista giochi dalla memoria
+    # Recupera la lista giochi dalla memoria
     games = st.session_state.my_games
     
     st.success(f"✅ Dati del profilo caricati! Trovati {len(games)} giochi.")
     st.divider()
     
-    # --- CALCOLO MEDIA GIORNALIERA RECENTE ---
-    # Sommiamo tutti i minuti giocati nelle ultime 2 settimane
+    # Somma tutti i minuti giocati nelle ultime 2 settimane
     minuti_totali_2_settimane = sum(g.get("playtime_2weeks", 0) for g in games)
 
-    # Convertiamo in ore e dividiamo per 14 giorni
+    # Converto in ore e divido per 14 giorni
     media_ore_giornaliere = (minuti_totali_2_settimane / 60) / 14
 
-    # --- STAMPA DELLE METRICHE GLOBALI ---
+    # STAMPA DELLE METRICHE GLOBALI
     col1, col2 = st.columns(2)
 
     with col1:
@@ -172,34 +192,31 @@ if st.session_state.active_sid:
         st.metric("⏱️ Media di gioco attuale", f"{media_ore_giornaliere:.1f} ore / giorno", help="Calcolata sugli ultimi 14 giorni")
         
     st.divider()
-    
-    # [Da qui in poi puoi inserire il resto della tua dashboard: Top 10, Grafici, ecc.]    
-    
-    
-    # ==========================================
-    # 🛑 BLOCCO DI SICUREZZA
-    # ==========================================
-    # Se non c'è nessun ID in memoria, fermiamo la pagina qui e aspettiamo
+        
+# ==========================================
+# Se non c'è nessun ID in memoria, ferma la pagina qui
+# ==========================================
+
     if not st.session_state.active_sid:
         st.info("👆 Inserisci un ID, un Vanity URL o un Link qui sopra per avviare l'analisi!")
         st.stop() # <-- Questo comando dice a Streamlit: "Non leggere il resto del file!"
 
-        
-    # SEZIONE 1: METRICHE PRINCIPALI
 
-    
+# ==========================================
+# STATISTICHE GENERALI
+# ==========================================
     st.subheader("📈 Statistiche Generali")
     
     col1, col2, col3, col4 = st.columns(4)
     
-    # Metrica 1: Giochi posseduti
+    # Giochi posseduti
     with col1:
         st.metric(
             label="🎮 Giochi Posseduti",
             value=len(games)
         )
     
-    # Metrica 2: Giochi giocati
+    # Giochi giocati
     played_games, total_games = get_owned_vs_played_ratio(games)
     with col2:
         st.metric(
@@ -207,7 +224,7 @@ if st.session_state.active_sid:
             value=played_games
         )
     
-    # Metrica 3: Tempo totale di gioco
+    # Tempo totale di gioco
     total_hours = calculate_total_playtime(games)
     with col3:
         st.metric(
@@ -215,7 +232,7 @@ if st.session_state.active_sid:
             value=f"{total_hours:.0f} ore"
         )
     
-    # Metrica 4: Percentuale giocati
+    # Percentuale giocati
     with col4:
         percentage = (played_games / total_games * 100) if total_games > 0 else 0
         st.metric(
@@ -225,7 +242,10 @@ if st.session_state.active_sid:
     
     st.divider()
     
-    # SEZIONE 2: GRAFICO CIAMBELLA
+# ==========================================
+# GIOCHI POSSEDUTI VS GIOCATI
+# ==========================================
+
     st.subheader("🍩 Rapporto Giochi Posseduti vs Giocati")
     
     col_chart, col_info = st.columns([2, 1])
@@ -270,7 +290,10 @@ if st.session_state.active_sid:
 
     st.divider()
 
-    # SEZIONE 3: TOP 10 GIOCHI DI SEMPRE
+# ==========================================
+# TOP 10 GIOCHI DI SEMPRE
+# ==========================================
+
     st.subheader("🏆 Top 10 Giochi di Sempre")
     
     top_games_all_time = get_top_games_by_playtime(games, limit=10)
@@ -287,7 +310,7 @@ if st.session_state.active_sid:
             for g in top_games_all_time
         ])
         
-        # --- CREAZIONE COLONNA IMMAGINI ---
+        # acchiappo le immagini
         if "appid" in df_all_time.columns:
             df_all_time["Icona"] = df_all_time["appid"].apply(
                 lambda x: f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{x}/capsule_231x87.jpg"
@@ -295,7 +318,7 @@ if st.session_state.active_sid:
         else:
             df_all_time["Icona"] = ""
         
-        # --- VISUALIZZAZIONE A TABS ---
+        # VISUALIZZAZIONE A TABS
         col_tab1, col_tab2 = st.tabs(["🔥 Top 10", "📊 Grafico"])
         
         with col_tab1:
@@ -313,7 +336,7 @@ if st.session_state.active_sid:
                 with col2:
                     st.metric("Ore di gioco", row["⏱️ Ore"])
                 
-                st.divider() # Linea di separazione tra un gioco e l'altro
+                st.divider() 
                 
         with col_tab2:
             # Grafico a barre
@@ -343,10 +366,13 @@ if st.session_state.active_sid:
     
     st.divider()
     
-    # SEZIONE 4: TOP GIOCHI ULTIME 2 SETTIMANE
+# ==========================================
+# TOP GIOCHI ULTIME DUE SETTIMANE
+# ==========================================
+
     st.subheader("🔥 Ultimi Giochi (Ultime 2 Settimane)")
     
-    # Filtra i dati per aggiungere playtime_2weeks
+    # playtime_2weeks
     for game in games:
         if game.get("playtime_2weeks", 0) > 0:
             continue
@@ -355,7 +381,7 @@ if st.session_state.active_sid:
     top_games_recent = get_top_games_by_recent_playtime(games, limit=10)
     
     if top_games_recent:
-        # Aggiungiamo l'appid al DataFrame per recuperare le immagini!
+        # appid per recuperare le immagini
         df_recent = pd.DataFrame([
             {
                 "appid": g.get("appid"),
@@ -365,7 +391,7 @@ if st.session_state.active_sid:
             for g in top_games_recent
         ])
         
-        # --- CREAZIONE COLONNA IMMAGINI ---
+        # IMMAGINI
         if "appid" in df_recent.columns:
             df_recent["Icona"] = df_recent["appid"].apply(
                 lambda x: f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{x}/capsule_231x87.jpg"
@@ -373,14 +399,13 @@ if st.session_state.active_sid:
         else:
             df_recent["Icona"] = ""
             
-        # --- VISUALIZZAZIONE A TABS ---
+        # TABS
         col_tab1, col_tab2 = st.tabs(["🔥 Più Giocati di Recente", "📊 Grafico"])
         
         with col_tab1:
             st.write("**I titoli a cui hai dedicato più tempo negli ultimi 14 giorni:**")
             
             for idx, row in df_recent.iterrows():
-                # Stesso layout a 3 colonne pulito della sezione precedente
                 col_img, col1, col2 = st.columns([1.5, 3, 1.5]) 
                 
                 with col_img:
@@ -391,7 +416,7 @@ if st.session_state.active_sid:
                 with col2:
                     st.metric("Ore (Ultime 2 sett.)", row["⏱️ Ore (2 sett.)"])
                 
-                st.divider() # Linea di separazione
+                st.divider()
                 
         with col_tab2:
             # Grafico a barre
@@ -419,11 +444,11 @@ if st.session_state.active_sid:
     else:
         st.info("Non hai giocato negli ultimi 14 giorni a nessuno dei tuoi giochi")
     
-    # --- CALCOLO MEDIA GIORNALIERA RECENTE ---
-    # Sommiamo tutti i minuti giocati nelle ultime 2 settimane
+    # MEDIA GIORNALIERA RECENTE
+    # Somma tutti i minuti giocati nelle ultime 2 settimane
     minuti_totali_2_settimane = sum(g.get("playtime_2weeks", 0) for g in games)
 
-    # Convertiamo in ore e dividiamo per 14 giorni
+    # Converte in ore e divide per 14 giorni
     media_ore_giornaliere = (minuti_totali_2_settimane / 60) / 14
 
     st.info(f"""

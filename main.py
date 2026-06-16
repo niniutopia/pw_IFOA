@@ -1,11 +1,22 @@
+ # ==========================================
+ # Import
+ # ==========================================
+
 import streamlit as st
 import requests
 
-# Configurazione della pagina
+ # ==========================================
+ # Configurazione della pagina
+ # ==========================================
+
 st.set_page_config(
     page_title="Steam Buddy",
     page_icon="🎮",
 )
+
+ # ==========================================
+ # Menù
+ # ==========================================
 # Stile CSS personalizzato
 st.markdown("""
     <style>
@@ -26,7 +37,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Sidebar con info
+# Sidebar con menù
 with st.sidebar:
     # Titolo
     st.markdown("### 🎮 Steam Buddy")
@@ -43,12 +54,14 @@ with st.sidebar:
     st.page_link("pages/3_platinum_hunter.py", label="Platinum Hunter", icon="🏆")
     
 
-
+ # ==========================================
+ # Body
+ # ==========================================
 # Titolo principale
 st.title("🎮 Steam Buddy")
 st.markdown('<div class="subtitle">Una panoramica del tuo account di steam, confrontala con quella dei tuoi amici!</div>', unsafe_allow_html=True)
 
-# Testo/body
+# Testo
 st.markdown("""
 ### **Benvenuto!** 👋            
 Una dashboard Streamlit per analizzare le tue statistiche di gioco Steam  in modo visivo, confrontarle con i tuoi amici e scoprire cosa manca per "platinare" un gioco.

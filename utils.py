@@ -275,4 +275,3 @@ def get_game_details(api_key, appid):
         return data[str(appid)]["data"]
     return None
 
-    import streamlit as st
